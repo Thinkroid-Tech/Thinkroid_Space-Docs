@@ -22,15 +22,15 @@ Thinkroid_Space-Docs/
 ## Development
 
 ```bash
-bun install
-bun run docs:dev
+npm install
+npm run docs:dev
 ```
 
 ## Build
 
 ```bash
-bun run docs:build
-bun run docs:preview
+npm run docs:build
+npm run docs:preview
 ```
 
 ## License

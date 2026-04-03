@@ -79,8 +79,8 @@ export default {
       { icon: 'github', link: 'https://github.com/Thinkroid-Tech' }
     ],
     footer: {
-      message: 'Built by <a href="https://www.thinkroid.com/" target="_blank">Thinkroid Tech</a>',
-      copyright: '© 2026 Thinkroid Tech. All rights reserved.'
+      message: 'Built by <a href="https://www.thinkroid.com/" target="_blank">Thinkroid Technologies Inc.</a>',
+      copyright: '© 2026 Thinkroid Technologies Inc. All rights reserved.'
     },
     outline: { level: [2, 3] }
   }
