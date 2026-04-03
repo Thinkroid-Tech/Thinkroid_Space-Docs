@@ -1,0 +1,261 @@
+# System Overview
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vite + React 18 |
+| Game Engine | Phaser 3 |
+| Backend | Node.js 22 + Express |
+| Database | SQLite (better-sqlite3) |
+| Communication | mitt event bus (Phaser ↔ React), SSE (server → client) |
+| AI | OpenAI-compatible API (Claude, GPT, OpenRouter, local LLMs) |
+| External Channels | Discord.js, node-telegram-bot-api |
+| Container Management | Dockerode |
+| Skills | Model Context Protocol (MCP) SDK |
+| Auth | JWT + bcrypt, Cloudflare Turnstile (optional) |
+| Deployment | Docker (multi-stage build, Node 22 Alpine) |
+
+---
+
+## System Diagram
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                        Browser                            │
+│                                                           │
+│  ┌────────────────┐    mitt event bus   ┌──────────────┐  │
+│  │   React UI     │◄──────────────────►│  Phaser 3     │  │
+│  │                │                     │  OfficeScene  │  │
+│  │  51 panels &   │                     │  (map, agents │  │
+│  │  overlays      │                     │   pathfinding │  │
+│  │                │                     │   minimap)    │  │
+│  └───────┬────────┘                     └──────────────┘  │
+│          │ REST API + SSE                                 │
+├──────────┼────────────────────────────────────────────────┤
+│          ▼                                                │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │              Express Server (26 routes)             │   │
+│  │                                                     │   │
+│  │  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │   │
+│  │  │  Routes  │  │   Services   │  │ Tool Registry │  │   │
+│  │  │  (REST)  │  │              │  │ (36 tools,    │  │   │
+│  │  │          │  │  AI Engine   │  │  auto-discover│  │   │
+│  │  │ agents   │  │  Idle Loop   │  │  & execute)   │  │   │
+│  │  │ tasks    │  │  Context Eng │  │               │  │   │
+│  │  │ settings │  │  Governance  │  │ + MCP Skills  │  │   │
+│  │  │ messages │  │  Cron Sched  │  │   (external)  │  │   │
+│  │  │ athena   │  │  Conv Engine │  │               │  │   │
+│  │  │ ...      │  │  Hook Mgr    │  │               │  │   │
+│  │  └──────────┘  └──────┬───────┘  └──────────────┘  │   │
+│  │                       │                             │   │
+│  │         ┌─────────────┼─────────────┐               │   │
+│  │         ▼             ▼             ▼               │   │
+│  │   ┌──────────┐  ┌──────────┐  ┌──────────┐         │   │
+│  │   │  SQLite  │  │  Memory  │  │    AI    │         │   │
+│  │   │   (DB)   │  │  (files) │  │  (LLMs)  │         │   │
+│  │   │          │  │          │  │          │         │   │
+│  │   │ agents   │  │ persona  │  │ Brain    │         │   │
+│  │   │ tasks    │  │ short-   │  │ Cerebel  │         │   │
+│  │   │ messages │  │   term   │  │ Context  │         │   │
+│  │   │ providers│  │ long-    │  │   Engine │         │   │
+│  │   │ cron_jobs│  │   term   │  │          │         │   │
+│  │   │ rooms    │  │ legacies │  │          │         │   │
+│  │   └──────────┘  └──────────┘  └──────┬───┘         │   │
+│  │                                      │              │   │
+│  │                          ┌───────────┼───────┐      │   │
+│  │                          ▼           ▼       ▼      │   │
+│  │                     ┌────────┐ ┌────────┐ ┌──────┐  │   │
+│  │                     │ Docker │ │Discord │ │Telegr│  │   │
+│  │                     │  API   │ │  Bot   │ │ Bot  │  │   │
+│  │                     └────────┘ └────────┘ └──────┘  │   │
+│  └────────────────────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Project Structure
+
+```
+thinkroid-space/
+├── thinkroid-space-server/          # Express backend
+│   └── src/
+│       ├── routes/                  # 26 API route modules
+│       │   ├── agents.js            #   Agent CRUD, settings, governance, morale
+│       │   ├── tasks.js             #   Task lifecycle, SSE execution
+│       │   ├── athena.js            #   Athena AI assistant endpoints
+│       │   ├── settings.js          #   Global settings, provider management
+│       │   ├── messages.js          #   Direct messaging between agents
+│       │   ├── conversations.js     #   Conversation threading
+│       │   ├── containers.js        #   Docker container management
+│       │   ├── cron.js              #   Cron job scheduling
+│       │   ├── skills.js            #   MCP skill management
+│       │   ├── departments.js       #   Department structure
+│       │   ├── organizations.js     #   Organization management
+│       │   ├── rooms.js             #   Room layout & furniture
+│       │   ├── items.js             #   Item registry & shop
+│       │   ├── files.js             #   Sandboxed file operations
+│       │   ├── approvals.js         #   Approval workflow
+│       │   ├── auth.js              #   Authentication (JWT)
+│       │   ├── users.js             #   User management
+│       │   ├── outer-channels.js    #   Discord/Telegram channel config
+│       │   ├── projects.js          #   Project management
+│       │   ├── records.js           #   Meeting records & notes
+│       │   ├── rules.js             #   Company/scope rules
+│       │   ├── meeting.js           #   Meeting management
+│       │   ├── spaces.js            #   Space configuration
+│       │   ├── legacies.js          #   Departed agent knowledge
+│       │   ├── notifications.js       #   External notification proxy + boss notifications
+│       │   └── events.js            #   SSE event broadcasting
+│       ├── services/                # Core business logic
+│       │   ├── ai.js                #   Dual-model AI calling (Brain + Cerebellum)
+│       │   ├── contextEngine.js     #   Dynamic prompt assembly & memory injection
+│       │   ├── idleLoop.js          #   Autonomous agent behavior loop
+│       │   ├── governanceEngine.js  #   22 capability definitions, AGENT_TEMPLATES, applyTemplate()
+│       │   ├── governanceLoop.js    #   Automated monitoring & intervention
+│       │   ├── governancePrompts.js #   Governance action prompts
+│       │   ├── governanceTriggers.js#   Event-driven governance triggers
+│       │   ├── conversationEngine.js#   Multi-type conversation management
+│       │   ├── cronScheduler.js     #   node-cron job scheduling
+│       │   ├── containerAdapter.js  #   Docker container management
+│       │   ├── outerChannelManager.js#  External channel routing
+│       │   ├── discord.js           #   Discord adapter
+│       │   ├── hookManager.js       #   Pre/post execution hooks
+│       │   ├── hookSetup.js         #   Hook initialization
+│       │   ├── interruptManager.js  #   Task interruption
+│       │   ├── pathfinding.js       #   A* pathfinding for agent movement
+│       │   ├── promptBlocks.js      #   System prompt building blocks
+│       │   ├── sceneTemplates.js    #   Prompt scene templates
+│       │   ├── tileGrid.js          #   Tile coordinate system
+│       │   ├── auth.js              #   JWT & password management
+│       │   ├── tools/               #   36 auto-discovered agent tools
+│       │   │   ├── registry.js      #     Tool auto-discovery & registration
+│       │   │   ├── index.js         #     Tool execution dispatcher
+│       │   │   ├── permissions.js   #     Tool permission checks
+│       │   │   ├── helpers.js       #     Shared tool utilities
+│       │   │   └── *.js             #     Individual tool files
+│       │   ├── skills/              #   MCP integration
+│       │   │   ├── skillManager.js  #     Skill lifecycle management
+│       │   │   └── mcpClientPool.js #     MCP connection pooling
+│       │   └── adapters/            #   External service adapters
+│       │       ├── discord-adapter.js
+│       │       └── telegram-adapter.js
+│       ├── ai/                      # AI client factory
+│       │   └── client.js
+│       ├── middleware/              # Express middleware
+│       │   ├── auth.js              #   JWT verification & permissions
+│       │   └── accessLog.js         #   Request logging
+│       ├── i18n/                    # Internationalization (en/zh/ja)
+│       ├── db.js                    # SQLite schema, migrations, seed data
+│       ├── memory.js                # Two-tier memory read/write
+│       ├── memoryStore.js           # Memory indexing & search
+│       ├── consolidate.js           # Memory consolidation (short→long term)
+│       ├── extractMemories.js       # AI memory extraction from conversations
+│       ├── morale.js                # Agent morale & stress calculation
+│       ├── ratelimit.js             # API rate limiting
+│       └── index.js                 # Server entry point
+├── thinkroid-space-ui/              # Vite + React frontend
+│   └── src/
+│       ├── components/              # 51 UI panels & overlays
+│       │   ├── AgentSettings.jsx    #   Per-agent configuration
+│       │   ├── SpaceSettings.jsx    #   Global settings
+│       │   ├── AthenaPanel.jsx      #   AI assistant chat interface
+│       │   ├── BossChatPanel.jsx    #   Boss-to-agent chat
+│       │   ├── Board.jsx            #   Kanban task board
+│       │   ├── MemoryPanel.jsx      #   Memory inspector
+│       │   ├── OuterChannelsOverlay.jsx # External channel config
+│       │   ├── ContainerPanel.jsx   #   Docker container management
+│       │   ├── CronPanel.jsx        #   Cron job scheduling
+│       │   ├── FileManagerPanel.jsx #   File browser
+│       │   ├── AgentSkillsPanel.jsx #   Skill management
+│       │   ├── HirePanel.jsx        #   Agent hiring
+│       │   ├── OnboardingWizard.jsx #   Multi-step onboarding (8 steps)
+│       │   ├── PromptEditor.jsx     #   System prompt editor
+│       │   └── ...                  #   36 more panels
+│       ├── game/
+│       │   ├── scenes/
+│       │   │   └── OfficeScene.js   #   Main Phaser scene
+│       │   └── tileConfig.js        #   Tile index mapping & styles
+│       ├── auth/
+│       │   └── AuthProvider.jsx     #   Auth context provider
+│       ├── audio/
+│       │   └── AmbienceAudio.js     #   Ambient sound effects
+│       ├── i18n/                    #   Frontend translations (en/zh/ja)
+│       ├── App.jsx                  #   Root component
+│       ├── events.js                #   mitt event bus
+│       ├── api.js                   #   API client
+│       └── index.css                #   All styles
+├── office/                          # Runtime data (Docker volume)
+│   ├── agents/                      #   Per-agent memory & persona files
+│   └── projects/                    #   Project workspaces
+├── Dockerfile                       # Multi-stage build (Node 22 Alpine)
+├── docker-compose.yml               # Single service, port 3000
+├── docker-entrypoint.sh             # Container startup script
+└── .env.example                     # Full configuration reference
+```
+
+---
+
+## Configuration Reference
+
+All configuration is through environment variables. Copy `.env.example` to `.env` and edit:
+
+### Server
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Backend API port |
+
+### AI Models
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AI_BASE_URL` | — | OpenAI-compatible API endpoint |
+| `AI_API_KEY` | `no-key` | API key for AI service |
+| `AI_MODEL` | — | Default Brain model |
+| `BRAIN_MAX_TOKENS` | `0` (unlimited) | Brain output token limit |
+| `CEREBELLUM_MODEL` | — | Cerebellum model for memory tasks |
+| `CEREBELLUM_BASE_URL` | (reuses AI_BASE_URL) | Separate cerebellum endpoint |
+| `CEREBELLUM_API_KEY` | (reuses AI_API_KEY) | Separate cerebellum API key |
+| `CEREBELLUM_MAX_TOKENS` | `0` (unlimited) | Cerebellum output token limit |
+
+### Discord
+
+Discord integration is now managed through the **External Channels** system (`outer_channels` table), not environment variables. Each channel stores its own credentials (webhook URL or bot token) in the database.
+
+### Docker Containers
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOCKER_SOCKET_PATH` | `/var/run/docker.sock` | Docker socket path |
+| `DOCKER_HOST` | — | Remote Docker API (alternative to socket) |
+| `DOCKER_WORKSPACE_HOST_PATH` | — | Host path for workspace volume |
+| `CONTAINER_CPU_QUOTA` | `50000` | CPU quota (50% of one core) |
+| `CONTAINER_MEMORY_LIMIT` | `536870912` | Memory limit (512MB) |
+| `CONTAINER_MAX_PER_AGENT` | `10` | Max containers per agent |
+| `CONTAINER_BACKEND` | `docker` | Container backend (docker or coolify) |
+
+### Authentication
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JWT_SECRET` | (auto-generated) | JWT signing secret |
+| `TURNSTILE_SITE_KEY` | — | Cloudflare Turnstile site key (optional) |
+| `TURNSTILE_SECRET_KEY` | — | Cloudflare Turnstile secret key |
+
+---
+
+## Key Design Decisions
+
+- **Phaser ↔ React communication** uses a mitt event bus (`events.js`), not direct coupling. Game state changes emit events that React panels subscribe to, and vice versa.
+- **AI calls** are centralized in `services/ai.js`. All AI interactions go through this single module, which handles provider resolution, model selection, and token tracking.
+- **Tool system** uses auto-discovery: any `.js` file in `services/tools/` that exports `{ defaultPermission, definition, executor }` is automatically registered at startup.
+- **Tool permissions** have four levels: `auto` (execute immediately), `confirm` (Boss approval queue), `always_confirm` (per-agent hook via `tool_approval` capability — triggers `tryAgentApproval()` before execution), and `deny` (blocked). `checkPermission()` returns `always_confirm` as a distinct value; the tool dispatcher routes it through the designated approval agent found via `findAgentWithCapability('tool_approval')`.
+- **Agent Templates** (`AGENT_TEMPLATES` in `governanceEngine.js`) define 10 pre-built role configurations. Calling `applyTemplate(agentId, templateId)` atomically sets the agent's persona, specialty, governance capabilities, and org role.
+- **Governance capabilities** number 22 across 6 categories (monitoring, communication, analysis, control, approval, reporting). The `tool_approval` capability (kind: `hook`, category: `approval`) designates an agent as the tool-use approver; its `params` field scopes which tools it covers. Agent color in the UI (`governance_color`) is computed server-side from the agent's highest-priority active capability category.
+- **No seed agents** — `db.js` no longer inserts default agents at startup. Agents are created by the user or via the Hire panel.
+- **Capability-based lookups** — internal services use `findAgentWithCapability(capabilityId)` to locate the right specialist agent rather than hard-coded role name fallbacks.
+- **Memory files** are stored on disk (`office/agents/{name}/`) rather than in SQLite, so they can be easily inspected and version-controlled.
+- **SSE** is used for real-time updates (task execution, token stats, agent movement) instead of WebSockets, keeping the server stateless-friendly.
+- **External notifications** are proxied through the backend (`/api/notifications/external`) to avoid CORS issues. The server caches the response for 24 hours. The frontend filters by install date, dismissed state, and user preferences.
