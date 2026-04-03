@@ -3,6 +3,7 @@ export default {
   description: 'Documentation for the gamified multi-agent orchestration platform',
   base: '/',
   ignoreDeadLinks: [/localhost/],
+  sitemap: { hostname: 'https://docs.thinkroid.space' },
   head: [
     ['link', { rel: 'icon', href: '/logo.png' }]
   ],
