@@ -75,11 +75,11 @@ export default {
     },
     search: { provider: 'local' },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/anthropics/thinkroid-space' }
+      { icon: 'github', link: 'https://github.com/Thinkroid-Tech' }
     ],
     footer: {
-      message: 'Thinkroid Space Documentation',
-      copyright: 'All rights reserved.'
+      message: 'Built by <a href="https://www.thinkroid.com/" target="_blank">Thinkroid Tech</a>',
+      copyright: '© 2026 Thinkroid Tech. All rights reserved.'
     },
     outline: { level: [2, 3] }
   }

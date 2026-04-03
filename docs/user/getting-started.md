@@ -14,7 +14,7 @@ Docker is the easiest way to get up and running. You'll need [Docker Desktop](ht
 
 ```bash
 # Clone the repository
-git clone https://github.com/thinkroid/thinkroid-space.git
+git clone https://github.com/Thinkroid-Tech/thinkroid-space.git
 cd thinkroid-space
 
 # Start everything with one command
