@@ -1,7 +1,7 @@
 export default {
   title: 'Thinkroid Space',
   description: 'Documentation for the gamified multi-agent orchestration platform',
-  base: '/Thinkroid_Space-Docs/',
+  base: '/',
   ignoreDeadLinks: [/localhost/],
   head: [
     ['link', { rel: 'icon', href: '/logo.png' }]
