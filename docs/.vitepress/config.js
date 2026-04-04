@@ -76,7 +76,7 @@ export default {
     },
     search: { provider: 'local' },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/Thinkroid-Tech' }
+      { icon: 'github', link: 'https://github.com/Thinkroid-Tech/Thinkroid-Space' }
     ],
     footer: {
       message: 'Built by <a href="https://www.thinkroid.com/" target="_blank">Thinkroid Technologies Inc.</a>',
