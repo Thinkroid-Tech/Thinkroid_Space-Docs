@@ -148,3 +148,16 @@ When `checkPermission()` returns `always_confirm`, the tool dispatcher (`tools/i
 4. The decision (and `decided_by` agent name) is written to the `tool_approvals` table before execution proceeds or the tool call is cancelled.
 
 This allows governance agents (e.g. a security reviewer) to approve or reject sensitive tool calls autonomously without requiring the human Boss to act on every request.
+
+---
+
+## Athena Tools
+
+Athena has a separate set of built-in tools used exclusively during Athena conversations. These are not part of the agent tool registry.
+
+| Tool | Description |
+|------|-------------|
+| `athena_query_space` | Read workspace data (agents, tasks, settings) to answer user questions. |
+| `athena_fill_onboarding` | Pre-fill the Agent Onboarding Wizard fields based on user conversation. |
+| `athena_present_options` | Render clickable option cards below Athena's response for multi-step choices. |
+| `athena_navigate` | Open a UI panel via SSE event from backend to frontend. Supports all 21 panels: `hire`, `departments`, `bossChat`, `settings`, `dashboard`, `taskBoard`, `board`, `governance`, `skills`, `meeting`, `approvals`, `bulletin`, `chatLog`, `messageCenter`, `records`, `outerChannels`, `prompts`, `fileManager`, `containers`, `cron`, `userMgmt`. Used when Athena suggests an action that requires navigating to a specific panel. |

@@ -57,33 +57,41 @@ Then open **http://localhost:3000** in your browser.
 
 Here is the fastest path from zero to a working agent:
 
-**1. Add an AI provider**
+**1. Setup Wizard (automatic on first launch)**
 
-Go to **Settings** (gear icon in the top-right) and open the **Providers** tab. Click **Add Provider** and fill in:
+When no AI providers are configured, the Setup Wizard opens automatically. It walks you through everything you need before entering the office.
+
+**2. Add an AI provider**
+
+In the wizard, click **Add Provider** and fill in:
 - A name (e.g. "OpenRouter" or "My Local LLM")
 - The base URL (e.g. `https://openrouter.ai/api/v1`)
 - Your API key
-- The model name you want to use
+- One or more model names
 
-Hit **Save**. Your provider is now available for all agents.
+Use the **Test** button to verify the connection before saving.
 
-**2. Hire your first agent**
+**3. Choose default AI models**
 
-The system starts with no agents — your office will be empty until you create some. Click the **Hire** button in the HUD to open the onboarding wizard.
+Select which model to use for **Brain** (the main reasoning model) and **Athena** (your AI assistant). Cerebellum and Context Engine are optional — they fall back to your Brain model if left empty.
 
-The first step is picking a **template**. Templates are pre-configured starting points: choose one that matches the kind of agent you want (e.g. Developer, Manager, Tester) or skip to build from scratch. From there you'll be guided through giving the agent a name, setting a persona, and choosing a model. Most steps are optional — you can skip straight to the end and refine later.
+**4. Pick an office size**
 
-**3. Open Boss Chat and give them a task**
+Choose Small, Medium, or Large, or enter custom tile dimensions. You can resize later in Settings.
 
-Click the **Chat** button (or the speech bubble next to your agent), select your agent, and type what you want done. Natural language works fine: "Research the top 5 project management tools and write a comparison summary."
+**5. Enter the office**
 
-**4. Watch them work**
+Click **Enter Office** to finish setup. On desktop, Athena opens automatically to help you hire your first agent and assign your first task.
 
-Your agent will appear in the office, walk to their desk, and start working. You can see their real-time output stream in the task panel — including their thinking steps and any tools they use.
+**Hire your first agent**
 
-**5. Check the results in the Task Board**
+Click the **Hire** button in the HUD to open the onboarding wizard. Pick a template (Developer, Manager, Tester, etc.) or start from scratch. Most steps are optional — you can refine settings later.
 
-Click **Board** in the top menu. Your task will be there with its status and the agent's output. Completed work is saved and searchable.
+**Give them a task**
+
+Click the **Chat** button, select your agent, and type what you want done. Natural language works fine: "Research the top 5 project management tools and write a comparison summary."
+
+Your agent will appear in the office, walk to their desk, and start working. Check results in **Board**.
 
 ---
 

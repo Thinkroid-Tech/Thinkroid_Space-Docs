@@ -90,3 +90,9 @@ Click **Approve** to proceed or **Deny** to cancel. Athena never makes changes s
 **Athena remembers context within a session.** You can refer back to earlier parts of the conversation. "Use the same settings as the last agent I hired" will work as long as you're in the same session.
 
 **When in doubt, just ask.** Athena is a good first stop for anything you're unsure about — whether it's a "how do I..." question or a "what's going on with..." question.
+
+---
+
+## Panel Navigation
+
+When Athena suggests an action that involves a specific part of the interface, she will automatically open the relevant panel for you. For example, if she recommends hiring a new agent, the Hire panel opens directly. If she suggests reviewing pending approvals, the Approvals panel opens. This works across all 21 panels in the system — you never have to hunt for where something lives.
