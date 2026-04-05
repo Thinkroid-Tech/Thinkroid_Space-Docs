@@ -87,6 +87,8 @@ Click **Enter Office** to finish setup. On desktop, Athena opens automatically t
 
 Click the **Hire** button in the HUD to open the onboarding wizard. Pick a template (Developer, Manager, Tester, etc.) or start from scratch. Most steps are optional — you can refine settings later.
 
+> **Already using an AI agent elsewhere?** If you have an existing AI agent with an OpenAI-compatible API (e.g. OpenClaw), you can connect it as an External Agent. It gets a full office presence — workspace, avatar, task assignment — while continuing to use its own AI backend. See [External Agents](./external-agents.md) for setup instructions.
+
 **Give them a task**
 
 Click the **Chat** button, select your agent, and type what you want done. Natural language works fine: "Research the top 5 project management tools and write a comparison summary."
