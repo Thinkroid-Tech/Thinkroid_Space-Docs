@@ -41,6 +41,25 @@ A note on the **Context Engine**: when it's using a lightweight model, you'll se
 
 ---
 
+## Backup Model Configuration
+
+You can configure a **backup model** for each AI model type. If the primary model fails (rate limit, server error, or timeout), Thinkroid Space automatically retries with the backup model — no manual intervention needed.
+
+**Global defaults** are set in Settings → Models tab. You can set a backup for the Brain, Cerebellum, and Context Engine. These apply to all agents unless overridden.
+
+**Per-agent overrides** — in each agent's Settings → Models tab, you can set a different backup Brain or backup Cerebellum just for that agent. The agent-level backup takes priority over the global default.
+
+**Athena** has its own backup model, configured in the Athena panel settings.
+
+**How the fallback works:**
+1. Primary model is called. If it fails, it retries up to 3 times.
+2. If all 3 retries fail, the backup model is used instead (also up to 3 retries).
+3. If the backup also fails, the task or request returns an error.
+
+If no backup is configured and the primary model fails, the error is reported normally. Setting up a backup is optional but recommended for production use where uninterrupted operation matters.
+
+---
+
 ## Space Settings
 
 **Space Name** — the name displayed in the top-left of the HUD. Call it whatever you like: "HQ", "Home Office", "The Lab."

@@ -120,6 +120,24 @@ If an agent is offboarded, their workstation is archived — the furniture and a
 
 ---
 
+## Agent Display
+
+Each agent in the office has visual elements floating above their head:
+
+**Name** — the agent's name, always visible.
+
+**Status Icon** — a small icon showing the agent's current work state:
+- 💻 (with pulse animation) — the agent is actively working on a task
+- ☕ (dimmed) — the agent is idle, waiting for work
+
+**Thinking Text** — when an agent is working, a small text label appears above the status icon showing what they're doing. It displays the task title when execution starts, then updates with the name of each tool the AI calls in real time (for example: "search_code", "write_file"). The text fades after a few seconds between updates.
+
+**Role Label** — the agent's role (e.g., "Software Engineer"). This is hidden by default to keep the display clean. It can be toggled on for all agents. When the role label is shown, the status icon, thinking text, and morale dot shift upward to make room.
+
+**Morale Dot** — a small colored dot indicating the agent's mood: green (happy), yellow (normal), orange (tired), or red/blinking (exhausted).
+
+---
+
 ## Office Size
 
 You can change the office dimensions in **Settings → Space Settings**. The office size is measured in tiles. The default is 50 x 38 tiles, with an outdoor grass area surrounding it on all sides (configurable via the Outdoor Padding setting).

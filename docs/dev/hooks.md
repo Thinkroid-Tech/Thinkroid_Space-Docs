@@ -424,6 +424,83 @@ The governance functions in `governanceTriggers.js` are currently called inline 
 
 Both functions broadcast their results to connected clients via `broadcastAgentEvent`, which in turn maps to `system:sse:broadcast`.
 
+### Governance output routing (governanceRouter.js)
+
+`services/governanceRouter.js` is the centralized gateway for all governance output. Every governance action calls `persistGovernanceOutput()`, which:
+
+1. Writes a record to the messages table with `channel='governance'`
+2. Broadcasts the corresponding SSE event (`governance:review`, `governance:intervention`, `governance:janitor:after`, `governance:budget:alert`)
+3. Calls `routeGovernanceNotification()` to decide whether to notify Boss
+
+**Notification routing flow:**
+
+```
+Governance action → persistGovernanceOutput()
+  → Write to messages (channel='governance')
+  → Broadcast SSE event
+  → routeGovernanceNotification()
+    → notification_reader agent assigned?
+        → AI call: NOTIFY | SKIP
+    → No reader?
+        → auto-notify only intervention + budget_alert
+```
+
+**Channel reference:**
+
+| Channel | Data Source | Purpose |
+|---------|-------------|---------|
+| Boss Chat (Manager) | `messages channel='boss'` + `dm:Boss:*` | Boss ↔ Agent conversations (manager channel + DMs) |
+| Message Center | `boss_notifications` | Filtered governance notifications (see MessageCenter section below) |
+| Dashboard → Governance | `messages channel='governance'` | Full governance audit log (DB-backed, persistent) |
+| Chat Log | `messages` (dm:, bulletin, meeting:) | Agent-to-agent chat |
+
+Note: Agent Settings chat and Boss Chat share the same DM channel (`dm:Boss:AgentName`), so conversations are unified across both views.
+
+**notification_reader capability:**
+
+Assigning the `notification_reader` capability (kind: `hook`, 23rd capability) to an agent makes that agent the governance notification filter. Before Boss is notified, the system calls the agent's Brain to evaluate the governance event summary and return `NOTIFY` or `SKIP`. This prevents low-signal events from cluttering the Boss inbox while keeping the full audit trail in the governance channel.
+
+A built-in `NotificationReader` agent template (12th template) ships pre-configured for this role — hire it from the Hire panel to enable filtering immediately.
+
+Fallback (no `notification_reader` assigned): only `intervention` and `budget_alert` events automatically notify Boss.
+
+**Data migration:**
+
+On server startup, any `[Auto Review]` or `[Intervention]` messages previously stored with `channel='boss'` are automatically migrated to `channel='governance'`.
+
+---
+
+### MessageCenter (`boss_notifications`)
+
+MessageCenter is the Boss's filtered notification inbox. Notifications arrive here after `governanceRouter.js` routes them through the `notification_reader` evaluation step.
+
+**UI features:**
+
+- **Inline expand/collapse** — click a notification to expand its full content in-place; does not navigate to BossChatPanel
+- **Markdown rendering** — expanded content rendered via ReactMarkdown + remarkGfm + rehypeHighlight (tables, code blocks, lists, inline code)
+- **Preview limit** — 4000 chars
+- **Category badge** — each item shows a colored badge for its event type (`review`, `intervention`, `janitor`, `budget_alert`, etc.)
+- **Lazy loading** — 20 items per page, appends on scroll
+- **Batch operations** — Read All, Select & Read, Delete All, Select & Delete; confirm dialogs for destructive actions
+- **Server-side search** — activates at 3+ characters, 400ms debounce
+- **Sort** — Newest / Oldest / Agent name
+- **Sender filter** — multi-select agent name checkboxes
+- **Category filter** — multi-select event type checkboxes
+- **Date range filter** — From/To date picker toggle
+
+**Schema change:** `boss_notifications` table gained a `category` column (event type string).
+
+**New API endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/notifications/boss/filters` | Available senders and categories for filter dropdowns |
+| `PUT` | `/api/notifications/boss/batch-read` | Mark selected IDs as read |
+| `DELETE` | `/api/notifications/boss/batch-delete` | Delete selected IDs |
+| `DELETE` | `/api/notifications/boss/delete-all-read` | Delete all read notifications |
+
+**Updated list endpoint** — `GET /api/notifications/boss` now accepts: `?search=&sort=&sender=&category=&from=&to=&before=&limit=&offset=`
+
 ---
 
 ## Frequently Asked Questions

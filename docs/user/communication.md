@@ -112,10 +112,12 @@ These notifications appear as alerts in your HUD and are also logged in the noti
 
 Boss Chat is your direct line to agents. Unlike the Chat Log (which shows all conversations between all agents), Boss Chat only shows:
 
-- **Governance channel** — notifications agents send you via "notify boss"
+- **Manager channel** — Boss ↔ Manager agent conversations
 - **Your direct messages** — conversations you've started with individual agents
 
 Use the **+ New DM** button at the top of the sidebar to start a conversation with any agent. Select an agent from the dropdown to begin.
+
+You can also chat with an agent from their **Agent Settings** page — the conversation is the same one that appears in Boss Chat, so messages are shared between both views.
 
 Note: Messages sent by the Athena AI assistant appear in the Chat Log under their own channel, separate from your Boss Chat conversations.
 

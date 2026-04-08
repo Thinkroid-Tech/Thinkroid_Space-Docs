@@ -17,6 +17,46 @@ Returns `{ hasCustom: boolean, agents: string[] }`.
 
 ---
 
+## Backup Model Fallback
+
+Each AI model type (Brain, Cerebellum, Context Engine, Athena) supports a backup model that is used automatically when the primary model fails.
+
+**What it does**: When the primary model fails after 3 retries (rate limit, server error, timeout, etc.), the system transparently switches to the configured backup model and retries up to 3 more times. If the backup also fails, the error is thrown. The `ai:backup:activated` hook event fires when a fallback is triggered.
+
+**Where to configure it:**
+
+| Location | Scope |
+|----------|-------|
+| SpaceSettings → Models tab | Global default backup for Brain, Cerebellum, Context Engine |
+| AgentSettings → Models tab | Per-agent backup Brain and Cerebellum override |
+| AthenaPanel → Settings | Athena-specific backup model |
+
+**Priority chain**: Agent-level backup → Global default backup → Error
+
+**Backup fields in agent settings** (`GET /PUT /api/agents/:name/settings`):
+
+| Field | Description |
+|-------|-------------|
+| `backup_brain_provider_id` | Backup provider for this agent's Brain |
+| `backup_brain_model` | Backup model name for Brain (overrides provider default) |
+| `backup_cerebellum_provider_id` | Backup provider for this agent's Cerebellum |
+| `backup_cerebellum_model` | Backup model name for Cerebellum |
+
+**Backup fields in global settings** (`GET /PUT /api/settings`):
+
+| Field | Description |
+|-------|-------------|
+| `backup_default_brain_provider_id` | Global default backup provider for Brain |
+| `backup_default_brain_model` | Global default backup Brain model |
+| `backup_default_cerebellum_provider_id` | Global default backup Cerebellum provider |
+| `backup_default_cerebellum_model` | Global default backup Cerebellum model |
+| `backup_default_context_engine_provider_id` | Global default backup Context Engine provider |
+| `backup_default_context_engine_model` | Global default backup Context Engine model |
+| `backup_athena_provider_id` | Backup provider for Athena |
+| `backup_athena_model` | Backup Athena model |
+
+---
+
 ## Providers
 
 ### `GET /api/settings/providers`
