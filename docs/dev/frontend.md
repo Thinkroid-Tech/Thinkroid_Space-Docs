@@ -1,7 +1,7 @@
 # Frontend Architecture
 
 This document describes the frontend architecture of Thinkroid-Space for contributors.
-The frontend lives in `thinkroid_space/thinkroid-space-ui/`.
+The frontend lives in `Thinkroid_Space/<branch>/thinkroid-space-ui/`.
 
 ## Overview
 
@@ -227,6 +227,8 @@ SSE events from `/api/events/stream` are re-emitted on the mitt bus:
 |----------|-----------|-----------|
 | `agent:move` | `agent:server-move` | OfficeScene (move sprite) |
 | `agent:morale-changed` | `agent:morale-changed` | OfficeScene (update morale bar) |
+| `agent:status` | `agent:status` | OfficeScene (update status icon) |
+| `agent:thinking` | `agent:thinking` | OfficeScene (update thinking text) |
 | `stats:refresh` | `stats:refresh` | StatsBar |
 | `task:created`, `task:updated` | `task:list-changed` | TaskBoard, AgentTaskPanel |
 | `agent:chat` | `agent:chat` | ChatOverlay, ChatLog |
@@ -369,11 +371,12 @@ automatic reconnect; no custom reconnection logic is needed.
 
 **SSE event types handled:**
 
-`agent:move`, `agent:morale-changed`, `stats:refresh`, `task:created`,
+`agent:move`, `agent:morale-changed`, `agent:status`, `agent:thinking`,
+`stats:refresh`, `task:created`,
 `task:updated`, `agent:chat`, `bulletin:new`, `approval:requested`,
 `approval:resolved`, `meeting:started`, `meeting:speech`, `meeting:concluded`,
 `governance:janitor`, `governance:budget_alert`, `governance:review`,
-`notification:new`, `cron:executed`, `cron:updated`
+`governance:intervention`, `notification:new`, `cron:executed`, `cron:updated`
 
 See the [Event Bus Protocol](#event-bus-protocol) table above for the full
 SSE → mitt mapping.
