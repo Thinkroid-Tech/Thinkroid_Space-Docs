@@ -259,7 +259,7 @@ REST paths the component calls directly.
 |-----------|---------|-------------------|
 | `HUD.jsx` | Top bar: space name, settings button, edit mode toggle, user menu | `GET /api/settings` |
 | `StatsBar.jsx` | Always-visible bottom bar: token budget, morale, task counts | `GET /api/agents`, `GET /api/tasks` (re-fetched on `stats:refresh` SSE) |
-| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/agents`, `POST /api/agents/:name/rest`, `GET /api/messages?channel=governance` |
+| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/agents`, `POST /api/agents/:name/rest`, `GET /api/messages/governance-events` (reads the `governance_events` table) |
 | `AgentPanel.jsx` | Clicked-agent detail panel with tabs for chat, tasks, settings, memory | `GET /api/settings/debug` |
 | `AgentSettings.jsx` | Full per-agent configuration: models, tools, governance, avatar, persona | `GET /api/settings/avatars`, `GET /api/settings/providers`, `GET /api/tools` (compat) or `GET /api/skills/builtin-tools`, `GET /api/agents/governance/capabilities`, `GET /api/agents/governance/templates`, `GET /api/agents` |
 | `AgentTaskPanel.jsx` | In-panel task list and task creation for a specific agent | `GET /api/tasks`, `GET /api/projects`, `POST /api/tasks` |

@@ -162,7 +162,7 @@ Body: memory config fields.
 Returns `{ success: true }`. Requires `manage_agents`.
 
 ### `GET /api/agents/:name/memory/:type`
-Read raw memory content. `type`: `short`, `long`, or `skill` (stored as JSON files under `@me/memory/<agent_name>/{short,long,skill}.json`).
+Read raw memory content. `type`: `short`, `long`, `skill`, or `persona` (persisted as Markdown files under `office/agents/<agent_name>/` — `short_memory.md`, `long_memory.md`, `skill_memory.md`, `persona.md`).
 Returns `{ type, content }`.
 
 ### `PUT /api/agents/:name/memory/:type`

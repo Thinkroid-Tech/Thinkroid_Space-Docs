@@ -428,7 +428,7 @@ Both functions broadcast their results to connected clients via `broadcastAgentE
 
 `services/governanceRouter.js` is the centralized gateway for all governance output. Every governance action calls `persistGovernanceOutput()`, which:
 
-1. Writes a record to the messages table with `channel='governance'`
+1. Inserts a row into the `governance_events` table (decoupled from the generic `messages` table; source code comment: "Persist governance output to the governance_events table (not messages)")
 2. Broadcasts the corresponding SSE event (`governance:review`, `governance:intervention`, `governance:janitor:after`, `governance:budget:alert`)
 3. Calls `routeGovernanceNotification()` to decide whether to notify Boss
 
@@ -436,7 +436,7 @@ Both functions broadcast their results to connected clients via `broadcastAgentE
 
 ```
 Governance action → persistGovernanceOutput()
-  → Write to messages (channel='governance')
+  → INSERT INTO governance_events
   → Broadcast SSE event
   → routeGovernanceNotification()
     → notification_reader agent assigned?
@@ -445,13 +445,13 @@ Governance action → persistGovernanceOutput()
         → auto-notify only intervention + budget_alert
 ```
 
-**Channel reference:**
+**Storage reference:**
 
-| Channel | Data Source | Purpose |
+| Surface | Data Source | Purpose |
 |---------|-------------|---------|
 | Boss Chat (Manager) | `messages channel='boss'` + `dm:Boss:*` | Boss ↔ Agent conversations (manager channel + DMs) |
 | Message Center | `boss_notifications` | Filtered governance notifications (see MessageCenter section below) |
-| Dashboard → Governance | `messages channel='governance'` | Full governance audit log (DB-backed, persistent) |
+| Dashboard → Governance | `governance_events` table (served by `GET /api/messages/governance-events`) | Full governance audit log (DB-backed, persistent) |
 | Chat Log | `messages` (dm:, bulletin, meeting:) | Agent-to-agent chat |
 
 Note: Agent Settings chat and Boss Chat share the same DM channel (`dm:Boss:AgentName`), so conversations are unified across both views.
@@ -464,9 +464,9 @@ A built-in `NotificationReader` entry in `AGENT_TEMPLATES` (one of the 11 pre-co
 
 Fallback (no `notification_reader` assigned): only `intervention` and `budget_alert` events automatically notify Boss.
 
-**Data migration:**
+**Data migration (legacy):**
 
-On server startup, any `[Auto Review]` or `[Intervention]` messages previously stored with `channel='boss'` are automatically migrated to `channel='governance'`.
+On server startup, any historical `[Auto Review]` or `[Intervention]` rows still sitting in the `messages` table under `channel='boss'` are moved to `channel='governance'` so they don't leak back into Boss Chat. This is purely legacy cleanup — new governance events are written directly to the `governance_events` table, never to `messages`.
 
 ---
 

@@ -20,7 +20,7 @@ Open the **Governance panel** by clicking the 🏛 button in the right sidebar u
 
 There are 22 capabilities you can grant or revoke per agent, organized into six categories.
 
-### Management (5)
+### Management (6)
 
 Coordination, team awareness, and the notification firewall:
 

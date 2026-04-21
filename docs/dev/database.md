@@ -42,8 +42,9 @@ The database file is stored at the path set by the `DB_PATH` environment variabl
 └──────────────┘   └────────────────┘   └──────────────────┘
 
   Memory store (NOT a SQL table):
-    @me/memory/<agent>/{short,long,skill}.json  — on disk, managed by memoryManager.js
-    agent:<id>:memory_config                     — stored in global_settings KV
+    office/agents/<name>/{persona,short_memory,long_memory}.md  — Markdown, managed by src/office.js
+    office/legacies/<name>/                                      — offboarding snapshot
+    agent:<id>:memory_config                                     — stored in global_settings KV
 
 ┌───────────┐   ┌────────────────┐   ┌─────────────────┐
 │   skills  │◄──│  agent_skills  │   │   mcp_servers   │
@@ -130,12 +131,17 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 
 ## 6. Memory
 
-Agent memory is **not** stored in SQLite. Each agent's short-term, long-term, and skill memory is persisted as JSON files at `@me/memory/<agent_name>/{short,long,skill}.json` inside the workspace volume, managed by `services/memoryManager.js`. Per-agent memory capacity and forgetting-curve parameters are stored under the key `agent:<id>:memory_config` in the `global_settings` KV table.
+Agent memory is **not** stored in SQLite. Each agent's persona, short-term, and long-term memory is persisted as plain Markdown files under `office/agents/<agent_name>/` on disk, managed by `src/office.js` (`readMemory` / `writeMemory`). When an agent is offboarded, these files are bundled into `office/legacies/<agent_name>/` as a handover archive. Per-agent memory capacity and forgetting-curve parameters are stored under the key `agent:<id>:memory_config` in the `global_settings` KV table.
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| short-term / long-term / skill memory | Structured memory entries per agent; tracks importance, decay, and retrieval frequency | `@me/memory/<agent>/{short,long,skill}.json` (workspace volume) |
+| persona | Static role identity written by `applyTemplate()` or `update_self_profile` | `office/agents/<name>/persona.md` |
+| short_memory | Recent context, working memory | `office/agents/<name>/short_memory.md` |
+| long_memory | Consolidated long-term knowledge | `office/agents/<name>/long_memory.md` |
+| legacy archive | Snapshot of the above at offboarding time | `office/legacies/<name>/` |
 | memory-config | Per-agent memory capacity limits and forgetting-curve parameters | `global_settings` row keyed `agent:<id>:memory_config` |
+
+> A future `ThinkroidMemory` API (referenced in `src/office.js` comments) is planned to back `short` / `long` / `skill` memory via `CeAccessView` / `CerebellumL1View`; current production reads still go through the Markdown files above.
 
 ### `governance_events`
 
@@ -213,7 +219,7 @@ Indexes are grouped by domain. The rationale is consistent: columns used in freq
 | Spatial | `rooms(space_id, type, owner_agent_id)` — room listing per space; `item_registry(category)` — item palette filtering; `placed_items(space_id, room_id, registry_id)` — rendering and spatial queries |
 | Organization | `organizations(type, space_id)`; `org_members(org_id, agent_id)`; `departments(org_id, parent_dept_id)`; `dept_members(dept_id, agent_id)`; `management_relations(manager_agent_id, subordinate_agent_id)` — hierarchy traversal |
 | Governance | `tool_approvals(status)` — pending approval queue; `rules(scope, category)`; `agent_capabilities(agent_id, capability_id)`; `governance_events(event_type, created_at)` |
-| Memory | File-backed (`@me/memory/<agent>/{short,long,skill}.json`); index/access patterns implemented in `services/memoryManager.js` |
+| Memory | File-backed Markdown under `office/agents/<name>/{persona,short_memory,long_memory}.md`; read/write through `src/office.js` |
 | AI and Debug | `token_usage(agent_name, created_at)` — cost reporting by agent and time range; `shadow_results(task_id)` |
 | Scheduling | `cron_jobs(enabled, agent_id)` — scheduler polling; `cron_executions(cron_job_id, started_at)` — execution history |
 | Skills | `agent_skills(agent_id+scope, skill_id)`; `skills(type, mcp_server_id)` |
