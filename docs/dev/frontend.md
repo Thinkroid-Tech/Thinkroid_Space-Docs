@@ -239,7 +239,7 @@ SSE events from `/api/events/stream` are re-emitted on the mitt bus (most share 
 | `meeting:started`, `meeting:speech`, `meeting:concluded` | same | MeetingRoom |
 | `conversation:created`, `conversation:message`, `conversation:speech`, `conversation:concluded` | same | ChatWindow, ChatLog |
 | `governance:new_event` | `governance:new_event` | Dashboard Governance tab re-fetches |
-| `governance:${eventType}` | same | Dashboard / StatsBar / SpaceSettings (by dynamic `eventType`, e.g. `janitor`, `review`, `intervention`, `budget_alert`, `performance_review`) |
+| `governance:${eventType}` | same | Dashboard / StatsBar / SpaceSettings — `eventType` values emitted today are `review`, `intervention`, `janitor`, `budget_alert`, and `tool_approval` |
 | `notification:new` | `notification:new` | App badge count, MessageCenter |
 | `cron:executed`, `cron:updated` | same | CronPanel |
 | `outer_chat:incoming`, `outer_chat:auto_reply`, `outer_chat:sent` | same | OuterChannelsOverlay, ChatLog |

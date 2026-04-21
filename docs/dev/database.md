@@ -132,7 +132,7 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 
 ## 6. Memory
 
-Agent memory is **not** stored in SQLite. Each agent's persona, short-term, and long-term memory is persisted as plain Markdown files under `office/agents/<agent_name>/` on disk, managed by `src/office.js` (`readMemory` / `writeMemory`). When an agent is offboarded, these files are bundled into `office/legacies/<agent_name>/` as a handover archive. Per-agent memory capacity and forgetting-curve parameters are stored under the key `agent:<id>:memory_config` in the `global_settings` KV table.
+Agent memory is **not** stored in SQLite. Each agent's persona, short-term, and long-term memory is persisted as plain Markdown files under `office/agents/<name>/` on disk, managed by `src/office.js` (`readMemory` / `writeMemory`). When an agent is offboarded, these files are bundled into `office/legacies/<name>/` as a handover archive. Per-agent memory capacity and forgetting-curve parameters are stored under the key `agent:<id>:memory_config` in the `global_settings` KV table.
 
 | Store | Purpose | Location |
 |-------|---------|----------|

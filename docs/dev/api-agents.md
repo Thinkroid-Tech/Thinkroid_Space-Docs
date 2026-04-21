@@ -162,7 +162,7 @@ Body: memory config fields.
 Returns `{ success: true }`. Requires `manage_agents`.
 
 ### `GET /api/agents/:name/memory/:type`
-Read raw memory content. `type` must be one of `short`, `long`, `persona`, or `project` (anything else → 400). Backed by Markdown files under `office/agents/<agent_name>/` — `short_memory.md`, `long_memory.md`, `persona.md` — and `office/projects/thinkroid-space/memory.md` for `project`. Skill memory is not exposed through this endpoint.
+Read raw memory content. `type` must be one of `short`, `long`, `persona`, or `project` (anything else → 400). Backed by Markdown files under `office/agents/<name>/` — `short_memory.md`, `long_memory.md`, `persona.md` — and `office/projects/thinkroid-space/memory.md` for `project`. Skill memory is not exposed through this endpoint.
 Returns `{ type, content }`.
 
 ### `PUT /api/agents/:name/memory/:type`
