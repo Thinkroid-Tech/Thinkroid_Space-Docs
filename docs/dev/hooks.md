@@ -429,7 +429,7 @@ Both functions broadcast their results to connected clients via `broadcastAgentE
 `services/governanceRouter.js` is the centralized gateway for all governance output. Every governance action calls `persistGovernanceOutput()`, which:
 
 1. Inserts a row into the `governance_events` table (decoupled from the generic `messages` table; source code comment: "Persist governance output to the governance_events table (not messages)")
-2. Broadcasts the corresponding SSE event (`governance:review`, `governance:intervention`, `governance:janitor:after`, `governance:budget:alert`)
+2. Broadcasts an SSE event named `governance:${eventType}`. The emitted event types today are `governance:review`, `governance:intervention`, `governance:janitor`, `governance:budget_alert`, and `governance:tool_approval`.
 3. Calls `routeGovernanceNotification()` to decide whether to notify Boss
 
 **Notification routing flow:**

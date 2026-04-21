@@ -135,9 +135,9 @@ Returns `{ overallReport, agentCount, agentDataList, reviewedAt }`. Requires `ma
 ## Memory
 
 ### `GET /api/agents/:name/memory-entries`
-Get paginated structured memory entries.
-Query: `?type=short|long|skill|condition&page=1&limit=20`
-Returns `{ entries, total, page, limit }`.
+Paginated structured-memory endpoint. **Currently a stub**: the implementation returns an empty `entries` array and `total: 0` regardless of the query params, pending the planned `ThinkroidMemory` migration (see Memory section in `database.md`). The `type` query param is accepted but not yet meaningful.
+Query: `?type=<string>&page=1&limit=20`
+Returns `{ entries: [], total: 0, page, limit }`.
 
 ### `PUT /api/agents/:name/memory-entries/:entryId`
 Update a memory entry's tags or importance score.

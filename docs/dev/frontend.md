@@ -264,7 +264,7 @@ REST paths the component calls directly.
 | `AgentSettings.jsx` | Full per-agent configuration: models, tools, governance, avatar, persona | `GET /api/settings/avatars`, `GET /api/settings/providers`, `GET /api/tools` (compat) or `GET /api/skills/builtin-tools`, `GET /api/agents/governance/capabilities`, `GET /api/agents/governance/templates`, `GET /api/agents` |
 | `AgentTaskPanel.jsx` | In-panel task list and task creation for a specific agent | `GET /api/tasks`, `GET /api/projects`, `POST /api/tasks` |
 | `AgentSkillsPanel.jsx` | Per-agent skill assignment: toggle built-in tools and MCP skills | `GET /api/skills` |
-| `MemoryPanel.jsx` | Agent long-term memory viewer and editor (multiple memory types) | `GET/PATCH /api/agents/:name/memory/:type`, `GET /api/agents/:name/memory-stats`, `POST /api/agents/:name/memory/consolidate` |
+| `MemoryPanel.jsx` | Agent long-term memory viewer and editor (multiple memory types) | `GET/PUT /api/agents/:name/memory/:type`, `GET /api/agents/:name/memory-stats`, `POST /api/agents/:name/memory/consolidate` |
 | `SpaceSettings.jsx` | Global settings: providers, office layout, theme, idle loop, governance, debug | `GET/PUT /api/settings`, `GET/POST /api/settings/providers`, `GET /api/settings/debug` |
 
 ### Communication

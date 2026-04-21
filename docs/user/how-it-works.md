@@ -71,7 +71,7 @@ You're also the only one who can change Settings and access the full system conf
 | **Projects** | A container grouping related tasks together. Every task belongs to a project. |
 | **Tools** | Actions agents can take — web search, file creation, running code, sending messages, and dozens more. Each tool can be restricted or approved. |
 | **Governance** | Rules controlling what agents can do without asking you first. Configure per-agent or globally. |
-| **Memory** | Agents have short-term memory (recent context), long-term memory (persistent knowledge), and skill memory (learned procedures that are almost never forgotten). |
+| **Memory** | Agents keep short-term memory (recent context) and long-term memory (persistent knowledge), plus a static persona. A dedicated skill-memory tier is planned but not yet persisted. |
 | **Morale** | An indicator of how strained an agent is. When morale drops low, the agent takes a break, which triggers memory consolidation. This is a health signal, not a game mechanic. |
 | **Records** | Permanent reference documents that agents and you can create. Meeting notes, research findings, work summaries — anything worth keeping. |
 | **Rooms** | Sub-areas of the office with their own themes, rules, and access controls. Context changes when an agent enters a room. |

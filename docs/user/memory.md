@@ -58,7 +58,7 @@ You don't need to trigger this manually — it happens automatically. But you ca
 Open an agent's profile and navigate to the Memory tab to see everything that agent currently remembers. Each entry shows:
 
 - The memory content
-- Which tier it lives in (short-term, long-term, or skill)
+- Which tier it lives in (short-term or long-term — a dedicated skill tier is on the roadmap but not yet persisted)
 - Its current importance score
 - When it was last accessed
 
@@ -73,7 +73,7 @@ From here you can:
 
 ## Legacies
 
-When an agent is offboarded, their memories aren't just deleted. The most important long-term and skill memories are preserved as a Legacy — a knowledge package associated with that agent's profile.
+When an agent is offboarded, their memories aren't just deleted. Their persona, short-term, and long-term memory files are bundled into a Legacy archive — a knowledge package associated with that agent's profile.
 
 When you hire a new agent, you can have them learn from the Legacy of a departed agent. This is especially useful for specialized roles: if a key agent leaves, their successor can inherit their institutional knowledge and get up to speed much faster.
 
