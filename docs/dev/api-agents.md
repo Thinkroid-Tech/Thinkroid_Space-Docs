@@ -162,11 +162,11 @@ Body: memory config fields.
 Returns `{ success: true }`. Requires `manage_agents`.
 
 ### `GET /api/agents/:name/memory/:type`
-Read raw memory content. `type`: `short`, `long`, `skill`, or `persona` (persisted as Markdown files under `office/agents/<agent_name>/` — `short_memory.md`, `long_memory.md`, `skill_memory.md`, `persona.md`).
+Read raw memory content. `type` must be one of `short`, `long`, `persona`, or `project` (anything else → 400). Backed by Markdown files under `office/agents/<agent_name>/` — `short_memory.md`, `long_memory.md`, `persona.md` — and `office/projects/thinkroid-space/memory.md` for `project`. Skill memory is not exposed through this endpoint.
 Returns `{ type, content }`.
 
 ### `PUT /api/agents/:name/memory/:type`
-Write raw memory content.
+Write raw memory content. Same `type` whitelist as the GET variant (`short` / `long` / `persona` / `project`; any other value → 400).
 Body: `{ content: string }`
 Returns `{ success, type, message }`. Requires `manage_agents`.
 

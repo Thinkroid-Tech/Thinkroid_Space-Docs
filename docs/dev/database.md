@@ -43,6 +43,7 @@ The database file is stored at the path set by the `DB_PATH` environment variabl
 
   Memory store (NOT a SQL table):
     office/agents/<name>/{persona,short_memory,long_memory}.md  — Markdown, managed by src/office.js
+    office/projects/thinkroid-space/memory.md                    — project-shared Markdown
     office/legacies/<name>/                                      — offboarding snapshot
     agent:<id>:memory_config                                     — stored in global_settings KV
 
@@ -138,10 +139,11 @@ Agent memory is **not** stored in SQLite. Each agent's persona, short-term, and 
 | persona | Static role identity written by `applyTemplate()` or `update_self_profile` | `office/agents/<name>/persona.md` |
 | short_memory | Recent context, working memory | `office/agents/<name>/short_memory.md` |
 | long_memory | Consolidated long-term knowledge | `office/agents/<name>/long_memory.md` |
+| project memory | Shared per-project notes | `office/projects/thinkroid-space/memory.md` |
 | legacy archive | Snapshot of the above at offboarding time | `office/legacies/<name>/` |
 | memory-config | Per-agent memory capacity limits and forgetting-curve parameters | `global_settings` row keyed `agent:<id>:memory_config` |
 
-> A future `ThinkroidMemory` API (referenced in `src/office.js` comments) is planned to back `short` / `long` / `skill` memory via `CeAccessView` / `CerebellumL1View`; current production reads still go through the Markdown files above.
+Skill memory is not currently persisted on disk as a dedicated file; the `ThinkroidMemory` module mentioned in `src/office.js` comments (targeting `CeAccessView` / `CerebellumL1View`) is planned but not yet shipped, and no code path writes a `skill_memory.md` today. Backup, inspection, and offboarding tooling should therefore target only the files listed above.
 
 ### `governance_events`
 
