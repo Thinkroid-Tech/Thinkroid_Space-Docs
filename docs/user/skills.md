@@ -12,7 +12,7 @@ Skills are powered by the **Model Context Protocol (MCP)**, an open standard tha
 
 Every agent has access to the same set of built-in tools out of the box:
 
-- **Built-in tools** (36 total) cover the fundamentals: chatting, reading and writing files, browsing the web, running containers, managing tasks, and more. These are always available to every agent and don't require any setup.
+- **Built-in tools** (51 total) cover the fundamentals: chatting, reading and writing files, browsing the web, running containers, managing tasks, scheduling cron jobs, Athena UI bridge helpers, and more. These are always available to every agent and don't require any setup.
 
 - **Skills** are add-ons. They come from MCP servers you connect, and they unlock capabilities that go beyond the built-in set — things like querying a specific SaaS product, running specialized computations, or integrating with your internal systems.
 

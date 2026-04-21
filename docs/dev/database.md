@@ -38,11 +38,12 @@ The database file is stored at the path set by the `DB_PATH` environment variabl
 └─────────────────┘   └──────────────┘   └───────────────────┘
 
 ┌──────────────┐   ┌────────────────┐   ┌──────────────────┐
-│  cron_jobs   │──►│cron_executions │   │  memory_entries  │
+│  cron_jobs   │──►│cron_executions │   │ governance_events│
 └──────────────┘   └────────────────┘   └──────────────────┘
-                                         ┌──────────────────┐
-                                         │  memory_config   │
-                                         └──────────────────┘
+
+  Memory store (NOT a SQL table):
+    @me/memory/<agent>/{short,long,skill}.json  — on disk, managed by memoryManager.js
+    agent:<id>:memory_config                     — stored in global_settings KV
 
 ┌───────────┐   ┌────────────────┐   ┌─────────────────┐
 │   skills  │◄──│  agent_skills  │   │   mcp_servers   │
@@ -121,18 +122,24 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
-| `agent_capabilities` | Which governance capabilities are active for each agent (e.g. `task_assignment`, `orphan_detection`); the `params` JSON column scopes capability behavior (e.g. which tools the `tool_approval` agent covers) | References `agents`; unique per `(agent_id, capability_id)` |
+| `agent_capabilities` | Which of the 22 governance capabilities are active for each agent (e.g. `task_assignment`, `orphan_detection`, `tool_approval`, `notification_reader`); the `params` JSON column scopes capability behaviour (e.g. which tools the `tool_approval` agent covers) | References `agents`; unique per `(agent_id, capability_id)` |
 | `tool_approvals` | Pending and resolved approval requests for `confirm`/`always_confirm`-level tools. The `decided_by TEXT` column records which agent (or `'boss'`) made the approval decision. | References `agents`, `tasks`, and `spaces`; stores execution context and resume state |
-| `rules` | Company-level and project-level rules injected into agent system prompts | Scoped to `'company'` or `'project'` |
+| `rules` | Rules injected into agent system prompts; stores `category` and `title` alongside `content`, with optional JSON `condition` (`{ scenes: string[], agents?: string[], hint?: string }`) | Scoped via `scope` + `scope_id` to one of `company`/`org`/`dept`/`project`/`room` |
 
 ---
 
 ## 6. Memory
 
-| Table | Purpose | Key Relationships |
-|-------|---------|-------------------|
-| `memory_entries` | Structured long-term, short-term, and skill memory for individual agents; tracks importance, decay, and retrieval frequency | References `agents`; indexed by `(agent_id, type)` and `decay_score` for efficient retrieval |
-| `memory_config` | Per-agent memory capacity limits and forgetting-curve parameters | One row per agent; references `agents` |
+Agent memory is **not** stored in SQLite. Each agent's short-term, long-term, and skill memory is persisted as JSON files at `@me/memory/<agent_name>/{short,long,skill}.json` inside the workspace volume, managed by `services/memoryManager.js`. Per-agent memory capacity and forgetting-curve parameters are stored under the key `agent:<id>:memory_config` in the `global_settings` KV table.
+
+| Store | Purpose | Location |
+|-------|---------|----------|
+| short-term / long-term / skill memory | Structured memory entries per agent; tracks importance, decay, and retrieval frequency | `@me/memory/<agent>/{short,long,skill}.json` (workspace volume) |
+| memory-config | Per-agent memory capacity limits and forgetting-curve parameters | `global_settings` row keyed `agent:<id>:memory_config` |
+
+### `governance_events`
+
+Governance events are persisted in their own `governance_events` table (decoupled from the generic `messages` table): `id, sender, content, event_type, priority, created_at`.
 # Database: System Tables
 
 > See also: [Back to top](#database-overview) | [Core Tables](#core)
@@ -205,8 +212,8 @@ Indexes are grouped by domain. The rationale is consistent: columns used in freq
 | Communication | `messages(channel, conversation_id, priority)` — channel feed queries; `conversations(type, status, channel)` — active conversation lookups; `read_cursors(agent_name)` — per-agent unread checks; `records(type, created_by)` — knowledge base filtering; `outer_channels(type)` — channel type filtering |
 | Spatial | `rooms(space_id, type, owner_agent_id)` — room listing per space; `item_registry(category)` — item palette filtering; `placed_items(space_id, room_id, registry_id)` — rendering and spatial queries |
 | Organization | `organizations(type, space_id)`; `org_members(org_id, agent_id)`; `departments(org_id, parent_dept_id)`; `dept_members(dept_id, agent_id)`; `management_relations(manager_agent_id, subordinate_agent_id)` — hierarchy traversal |
-| Governance | `tool_approvals(status)` — pending approval queue; `rules(scope, category)`; `agent_capabilities(agent_id, capability_id)` |
-| Memory | `memory_entries(agent_id+type)` — scoped retrieval; `memory_entries(decay_score DESC)` — forgetting curve eviction; `memory_entries(created_at)` — chronological access |
+| Governance | `tool_approvals(status)` — pending approval queue; `rules(scope, category)`; `agent_capabilities(agent_id, capability_id)`; `governance_events(event_type, created_at)` |
+| Memory | File-backed (`@me/memory/<agent>/{short,long,skill}.json`); index/access patterns implemented in `services/memoryManager.js` |
 | AI and Debug | `token_usage(agent_name, created_at)` — cost reporting by agent and time range; `shadow_results(task_id)` |
 | Scheduling | `cron_jobs(enabled, agent_id)` — scheduler polling; `cron_executions(cron_job_id, started_at)` — execution history |
 | Skills | `agent_skills(agent_id+scope, skill_id)`; `skills(type, mcp_server_id)` |

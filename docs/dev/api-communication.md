@@ -138,9 +138,16 @@ Returns `{ success, meetingId, topic, participants, conclusion, messages }`. Req
 
 ## Notifications
 
+### `GET /api/notifications/filters`
+List available sender and category options for filter dropdowns.
+Returns `{ senders: string[], categories: string[] }`.
+
 ### `GET /api/notifications`
-List Boss notifications. `pending` shows the latest per agent; `read` shows most recently read.
-Query: `?status=pending|read&limit=50` — Returns `BossNotification[]`.
+List Boss notifications with full filtering and pagination.
+Query: `?search=&sort=&sender=&category=&from=&to=&before=&limit=&offset=` — Returns `BossNotification[]`.
+
+### `GET /api/notifications/external`
+Proxy fetch of external notices from `https://www.thinkroid.space/notice.json` with 24h server-side cache. Requires authentication.
 
 ### `PUT /api/notifications/read-all`
 Mark all pending notifications as read.
@@ -149,6 +156,20 @@ Returns `{ success: true, count: number }`.
 ### `PUT /api/notifications/:id/read`
 Mark a notification (and all other pending ones from the same agent) as read.
 Returns `{ success: true, count: number }`.
+
+### `PUT /api/notifications/batch-read`
+Mark a list of notification IDs as read.
+Body: `{ ids: string[] }` — Returns `{ success, count }`.
+
+### `DELETE /api/notifications/batch-delete`
+Delete a list of notification IDs.
+Body: `{ ids: string[] }` — Returns `{ success, count }`.
+
+### `DELETE /api/notifications/delete-all-read`
+Delete all notifications that are already read.
+Returns `{ success, count }`.
+
+> Historical `/api/notifications/boss/*` paths have been retired — the prefix is now simply `/api/notifications/`.
 
 ---
 
@@ -160,18 +181,39 @@ Returns SSE stream (`text/event-stream`). Initial event: `{ type: "connected" }`
 
 | Event | Payload |
 |-------|---------|
-| `agent:status` | `{ agentName, status }` |
-| `agent:morale-changed` | `{ agentName, morale, status, needsRest }` |
-| `agent:chat` | `{ channel, sender, target, message, priority }` |
-| `task:created` | `{ taskId, title, assigned_to, unassigned }` |
-| `task:updated` | `{ taskId, status, deleted? }` |
+| `agent:status` | `{ agentName, status, taskTitle? }` |
+| `agent:thinking` | `{ agentName, tool }` |
+| `agent:move` | `{ agentName, from, to, path }` |
+| `agent:morale-changed` | `{ agentName, morale, delta, reason? }` |
+| `agent:chat` | `{ channel, sender, target?, message\|content, priority? }` |
+| `task:created` | `{ taskId\|id, title, assigned_to?, assignedTo?, unassigned?, parentTaskId? }` |
+| `task:updated` | `{ taskId\|id, status?, deleted?, assigned_to? }` |
 | `task:interrupted` | `{ taskId, agentName, interruptedBy, snapshotRecordId }` |
 | `task:resuming` | `{ taskId, agentName }` |
-| `task:completed` | `{ taskId, agentName, result }` |
-| `stats:refresh` | `{}` |
-| `approval:resolved` | `{ approvalId, toolName, agentName, decision, pendingCount }` |
-| `notification:new` | `{ ...notification, pendingCount }` |
-| `cron:updated` | `{ action, jobId }` |
+| `task:completed` | `{ taskId, result }` |
+| `task:update` | `{ taskId, ... }` (external-agent callback) |
+| `conversation:created` | `{ conversationId, channel, type, participants }` |
+| `conversation:message` | `{ conversationId, message }` |
+| `conversation:speech` | `{ conversationId, speaker, content }` |
+| `conversation:concluded` | `{ conversationId, summary, recordId? }` |
+| `meeting:started` | `{ meetingId, participants, topic? }` |
+| `meeting:speech` | `{ meetingId, speaker, content }` |
+| `meeting:concluded` | `{ meetingId, conclusion }` |
+| `bulletin:new` | `{ message }` |
+| `notification:new` | `{ agentName?, eventType?, content, priority? }` |
+| `approval:requested` | `{ approvalId, agent_id, agentName, tool_name, args, ctx?, expiresAt? }` |
+| `approval:agent_decided` | `{ approvalId, decision, decidedBy: 'agent', reason? }` |
+| `approval:resolved` | `{ approvalId, decision, decidedBy }` |
+| `governance:new_event` | `{}` — front-end re-fetches governance feed |
+| `governance:${eventType}` | `{ id, sender, content, eventType, priority, timestamp }` — `eventType` is dynamic (e.g. `janitor`, `review`, `intervention`, `budget_alert`, `performance_review`) |
+| `cron:updated` | `{ action, jobId, agentName?, timestamp? }` (action: `created`/`updated`/`deleted`/`approved`) |
+| `cron:executed` | `{ jobId, status, result?, error? }` |
+| `outer_chat:incoming` | `{ channel, message }` |
+| `outer_chat:auto_reply` | `{ channel, agent, reply }` |
+| `outer_chat:sent` | `{ channel, content, sender }` |
+| `stats:refresh` | `{ agentName?, totalTokens? }` |
 | `skills:updated` | `{ serverId }` |
-| `meeting:started` | `{ meetingId, topic, caller, participants, channel }` |
-| `outer_chat:sent` | `{ channelId, channelName, sender, message }` |
+
+> `task:executing`, `task:failed`, `task:list-changed`, `message:dm`, `agent:server-move`, `agent:created/updated/deleted` do not exist as first-class SSE events — the front-end infers them from `task:updated` + `stats:refresh` and the stable event set above.
+>
+> Athena-specific events (`token`, `tool`, `approval_needed`, `ui_read`, `ui_fill`, `ui_click`, `auto_compacted`, `done`) are streamed on the per-request `POST /api/athena/chat` SSE response, not on this global stream.

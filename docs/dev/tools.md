@@ -1,6 +1,6 @@
 # Agent Tools
 
-Thinkroid Space agents interact with the world through tools. All tools are auto-discovered from `thinkroid-space-server/src/services/tools/` — each tool is a single `.js` file exporting `{ defaultPermission, definition, executor }`.
+Thinkroid Space agents interact with the world through tools. All tools are auto-discovered from `thinkroid-space-server/src/services/tools/` by `registry.js` — each tool file exports `{ defaultPermission, definition, executor }`. The registry currently loads **51 built-in tools**: 8 file / shell / web, 6 container, 1 introspection, 8 collaboration, 6 task / project, 3 record & memory, 2 spatial, 1 reasoning, 1 skill, 1 scheduling, and 14 Athena UI-bridge tools.
 
 ---
 
@@ -29,8 +29,9 @@ Thinkroid Space agents interact with the world through tools. All tools are auto
 | Tool | Description |
 |------|-------------|
 | `check_my_tasks` | Check assigned tasks. Returns pending and in-progress tasks by default. |
-| `delegate_task` | Delegate a sub-task to a direct subordinate. Only works for agents in the management chain. The sub-task is created and automatically executed. |
-| `reject_task` | Reject the current task and send it back to the assigner. Use when the task is outside capability or should be reassigned. Requires a clear reason. |
+| `complete_task` | Mark the current task complete and submit the result. The result is attached to the task row and broadcast via `task:completed`. |
+| `delegate_task` | Delegate a new sub-task to a direct subordinate. Input: `{ title, description, assign_to, project? }`; the caller must be the assignee's direct manager. The sub-task is created and automatically executed. |
+| `reject_task` | Reject the current task and send it back to the assigner. Input: `{ reason }` (taskId is taken from the executor context). Only valid when the task is `in_progress`. |
 | `list_projects` | List all projects in the workspace. Shows active projects by default. |
 | `get_project_detail` | Get detailed information about a specific project, including its rules and active task count. |
 | `cron_schedule` | Create, update, delete, or list scheduled cron jobs. Supports two types: `task` (creates a Task on schedule) and `script` (runs a command in container/shell, requires Boss approval). Standard 5-field cron syntax. |
@@ -49,6 +50,7 @@ All file tools support workspace routing with prefixes:
 | `file_write` | Write content to a file. Creates the file if it does not exist. |
 | `file_edit` | Edit a file by replacing an exact string match. |
 | `file_search` | Search for files by name pattern (glob) and/or content (regex). |
+| `file_delete` | Delete a file or directory in the workspace. |
 
 ## Container & Execution
 
@@ -71,12 +73,14 @@ Agents can run code and deploy services in sandboxed Docker containers. Workspac
 | `web_search` | Search the web using DuckDuckGo. Returns results with titles, URLs, and snippets. |
 | `web_fetch` | Fetch a URL and return text content. Strips HTML by default; set `raw=true` for original HTML. |
 
-## Self & Memory
+## Records, Self & Memory
 
 | Tool | Description |
 |------|-------------|
+| `read_record` | Look up a Record by name or ID and return its content. |
+| `write_record` | Create or update a Record (notes, meeting conclusions, reports). |
+| `recall` | Recall all memories related to a topic or query. Returns keyword-matched memory fragments within a token budget. |
 | `update_self_profile` | Update own persona description and/or specialty. Changes take effect immediately. |
-| `recall` | Recall all memories related to a topic or query. Returns keyword-matched memory fragments within token budget. |
 | `deep_think` | Trigger deep thinking mode to recall more memories with lower filtering thresholds. Use for complex tasks that need more background information. |
 | `install_skill` | Request installation of a new skill or tool. Supports `mcp_server`, `skill_url`, or `builtin_skill` types. Requires Boss approval. |
 
@@ -153,11 +157,23 @@ This allows governance agents (e.g. a security reviewer) to approve or reject se
 
 ## Athena Tools
 
-Athena has a separate set of built-in tools used exclusively during Athena conversations. These are not part of the agent tool registry.
+Athena ships with 14 UI-bridge tools in the same `services/tools/` registry; these are exposed only during Athena conversations and are filtered out of regular agent tool lists.
 
 | Tool | Description |
 |------|-------------|
 | `athena_query_space` | Read workspace data (agents, tasks, settings) to answer user questions. |
-| `athena_fill_onboarding` | Pre-fill the Agent Onboarding Wizard fields based on user conversation. |
+| `athena_query_agents` | Query agent details (roster, specialty, current task, governance capabilities). |
+| `athena_query_tasks` | Query tasks across projects with status / assignee filters. |
+| `athena_query_memory` | Read a target agent's memory fragments related to a topic. |
+| `athena_query_settings` | Read individual keys from `global_settings`. |
+| `athena_create_task` | Create a new task on behalf of the user (Boss-side creation). |
+| `athena_send_message` | Send a message into a chat channel on the user's behalf. |
+| `athena_update_setting` | Update a `global_settings` key after inline approval. |
+| `athena_fill_onboarding` | Pre-fill Agent Onboarding Wizard fields based on the user conversation. |
 | `athena_present_options` | Render clickable option cards below Athena's response for multi-step choices. |
-| `athena_navigate` | Open a UI panel via SSE event from backend to frontend. Supports all 22 panels: `hire`, `departments`, `bossChat`, `settings`, `dashboard`, `taskBoard`, `board`, `governance`, `skills`, `meeting`, `approvals`, `bulletin`, `chatLog`, `messageCenter`, `records`, `outerChannels`, `prompts`, `fileManager`, `containers`, `cron`, `userMgmt`, `externalAgents`. Used when Athena suggests an action that requires navigating to a specific panel. |
+| `athena_navigate` | Open a UI panel via SSE event from backend to frontend (e.g. `hire`, `departments`, `bossChat`, `settings`, `dashboard`, `taskBoard`, `board`, `governance`, `skills`, `meeting`, `approvals`, `bulletin`, `chatLog`, `messageCenter`, `records`, `outerChannels`, `prompts`, `fileManager`, `containers`, `cron`, `userMgmt`, `externalAgents`). |
+| `athena_read_ui` | Scan the topmost visible panel via `uiBridge.scanUI()` and return structured JSON of fields/buttons/texts. |
+| `athena_fill_field` | Locate a form input by `data-athena-field` and set its value (via `uiBridge.fillField()`). Requires inline approval. |
+| `athena_click_button` | Click a button by `data-athena-action` (via `uiBridge.clickButton()`). Destructive buttons (`data-athena-dangerous="true"`) require `confirmDangerous`. Requires inline approval. |
+
+Inline approvals for the write-type Athena tools are streamed back on the per-request `POST /api/athena/chat` SSE response (`approval_needed` event) and resolved through `POST /api/athena/approve/:approvalId`. MCP tools installed via `install_skill` are exposed under the `mcp__{serverName}__{toolName}` namespace (see `design/tools.md`).

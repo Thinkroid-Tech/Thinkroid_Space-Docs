@@ -27,7 +27,7 @@ features:
     details: Dual-model Brain/Cerebellum system with memory, persona, morale tracking, and autonomous behavior.
   - icon:
       src: /icons/wrench.svg
-    title: 36 Agent Tools
+    title: 51 Built-in Agent Tools
     details: Agents can chat, write files, run code in Docker, search the web, schedule tasks, and more.
   - icon:
       src: /icons/landmark.svg
@@ -42,3 +42,4 @@ features:
     title: Athena AI Assistant
     details: Your personal AI assistant to manage the space — hire agents, assign tasks, query anything via natural language.
 ---
+

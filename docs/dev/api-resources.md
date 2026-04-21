@@ -283,8 +283,8 @@ List tool approvals. Query: `?status=pending|all`
 Returns `ToolApproval[]`.
 
 ### `POST /api/approvals/:id/decide`
-Approve or deny a pending tool approval. On approval, executes the tool and resumes the suspended agent loop.
-Body: `{ decision: "approved" | "denied" }` — Returns `{ ok: true, decision }`.
+Approve or deny a pending tool approval. On approval, executes the tool and resumes the suspended agent loop. This is the single decision endpoint — legacy `/approve` + `/deny` splits have been merged.
+Body: `{ decision: "approved" | "denied", reason? }` — Returns `{ ok: true, decision }`.
 
 ---
 
@@ -342,12 +342,12 @@ Returns `{ ok: true }`. Requires `manage_records`.
 ## Rules
 
 ### `GET /api/rules/scopes`
-List all available rule scopes with entity names.
+List all available rule scopes with entity names. Returns entries for the 5 scope types: `company`, `org`, `dept`, `project`, `room`.
 Returns `{ type, id, label }[]` — e.g. `{ type: "dept", id: "uuid", label: "Engineering (department)" }`.
 
 ### `GET /api/rules`
 List rules with optional filters.
-Query: `?scope=company|project|org|dept|room&scope_id=<uuid>`
+Query: `?scope=company|org|dept|project|room&scope_id=<uuid>` (5 scope values total — `role` is deprecated)
 Returns `Rule[]` with parsed `condition` object.
 
 ### `GET /api/rules/effective/:scope`
@@ -356,8 +356,8 @@ Returns `Rule[]`.
 
 ### `POST /api/rules`
 Create a rule.
-Body: `{ scope, scope_id?, category, title, content, enabled?, condition? }`
-`condition` format: `{ scenes?: string[], agents?: string[], hint?: string }`
+Body: `{ scope, scope_id?, category, title, content, enabled?, condition? }` — `scope` is one of `company`/`org`/`dept`/`project`/`room`.
+`condition` format: `{ scenes?: string[], agents?: string[], hint?: string }` (plural `scenes`)
 Returns `Rule` (201). Requires `manage_rules`.
 
 ### `PUT /api/rules/:id`

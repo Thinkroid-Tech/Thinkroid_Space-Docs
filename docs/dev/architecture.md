@@ -27,7 +27,7 @@
 │  ┌────────────────┐    mitt event bus   ┌──────────────┐  │
 │  │   React UI     │◄──────────────────►│  Phaser 3     │  │
 │  │                │                     │  OfficeScene  │  │
-│  │  51 panels &   │                     │  (map, agents │  │
+│  │  56 panels &   │                     │  (map, agents │  │
 │  │  overlays      │                     │   pathfinding │  │
 │  │                │                     │   minimap)    │  │
 │  └───────┬────────┘                     └──────────────┘  │
@@ -39,7 +39,7 @@
 │  │                                                     │   │
 │  │  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │   │
 │  │  │  Routes  │  │   Services   │  │ Tool Registry │  │   │
-│  │  │  (REST)  │  │              │  │ (36 tools,    │  │   │
+│  │  │  (REST)  │  │              │  │ (51 tools,    │  │   │
 │  │  │          │  │  AI Engine   │  │  auto-discover│  │   │
 │  │  │ agents   │  │  Idle Loop   │  │  & execute)   │  │   │
 │  │  │ tasks    │  │  Context Eng │  │               │  │   │
@@ -112,7 +112,7 @@ thinkroid-space/
 │       │   ├── ai.js                #   Dual-model AI calling (Brain + Cerebellum)
 │       │   ├── contextEngine.js     #   Dynamic prompt assembly & memory injection
 │       │   ├── idleLoop.js          #   Autonomous agent behavior loop
-│       │   ├── governanceEngine.js  #   22 capability definitions, AGENT_TEMPLATES, applyTemplate()
+│       │   ├── governanceEngine.js  #   22 capability definitions (management/finance/quality/monitoring/evaluation/approval), AGENT_TEMPLATES (11), applyTemplate()
 │       │   ├── governanceLoop.js    #   Automated monitoring & intervention
 │       │   ├── governancePrompts.js #   Governance action prompts
 │       │   ├── governanceTriggers.js#   Event-driven governance triggers
@@ -129,9 +129,9 @@ thinkroid-space/
 │       │   ├── sceneTemplates.js    #   Prompt scene templates
 │       │   ├── tileGrid.js          #   Tile coordinate system
 │       │   ├── auth.js              #   JWT & password management
-│       │   ├── tools/               #   36 auto-discovered agent tools
-│       │   │   ├── registry.js      #     Tool auto-discovery & registration
-│       │   │   ├── index.js         #     Tool execution dispatcher
+│       │   ├── tools/               #   51 auto-discovered agent tools
+│       │   │   ├── registry.js      #     Tool auto-discovery & registration (loads all 51 tool files; exports `{ definition, executor, defaultPermission }`)
+│       │   │   ├── index.js         #     Tool execution dispatcher (approvals, permission checks, agent-approval routing)
 │       │   │   ├── permissions.js   #     Tool permission checks
 │       │   │   ├── helpers.js       #     Shared tool utilities
 │       │   │   └── *.js             #     Individual tool files
@@ -157,7 +157,7 @@ thinkroid-space/
 │       └── index.js                 # Server entry point
 ├── thinkroid-space-ui/              # Vite + React frontend
 │   └── src/
-│       ├── components/              # 51 UI panels & overlays
+│       ├── components/              # 56 UI panels & overlays
 │       │   ├── AgentSettings.jsx    #   Per-agent configuration
 │       │   ├── SpaceSettings.jsx    #   Global settings
 │       │   ├── AthenaPanel.jsx      #   AI assistant chat interface
@@ -170,9 +170,9 @@ thinkroid-space/
 │       │   ├── FileManagerPanel.jsx #   File browser
 │       │   ├── AgentSkillsPanel.jsx #   Skill management
 │       │   ├── HirePanel.jsx        #   Agent hiring
-│       │   ├── OnboardingWizard.jsx #   Multi-step onboarding (8 steps)
+│       │   ├── OnboardingWizard.jsx #   Multi-step onboarding wizard
 │       │   ├── PromptEditor.jsx     #   System prompt editor
-│       │   └── ...                  #   36 more panels
+│       │   └── ...                  #   additional panels
 │       ├── game/
 │       │   ├── scenes/
 │       │   │   └── OfficeScene.js   #   Main Phaser scene
@@ -199,30 +199,30 @@ thinkroid-space/
 
 ## Configuration Reference
 
-All configuration is through environment variables. Copy `.env.example` to `.env` and edit:
+Configuration is split across two surfaces:
+
+- **Environment variables** — runtime infrastructure (ports, paths, secrets, container limits, external tokens). Set in `Thinkroid_Space-Docker/<instance>/.env`.
+- **`global_settings` table** — all AI model defaults and per-space preferences (space name, default brain/cerebellum/CE provider + model, Athena config, notifications, rules migration flag, etc.). Read/write through `GET/PUT /api/settings`.
+
+Historical AI environment variables (`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, `CEREBELLUM_*`, `BRAIN_MAX_TOKENS`, `CEREBELLUM_MAX_TOKENS`) have been retired. Models are resolved at runtime from the `providers` table and `default_{brain,cerebellum,context_engine}_*` keys in `global_settings`.
 
 ### Server
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3000` | Backend API port |
+| `DB_PATH` | `/app/office/thinkroid-space.db` | SQLite file path inside the container |
+| `AGENT_WORKSPACE` | `/app/workspace` | Agent-file isolation root |
+| `SOURCE_DIR` | `main` | Worktree folder the compose file binds to |
 
-### AI Models
+### Authentication
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AI_BASE_URL` | — | OpenAI-compatible API endpoint |
-| `AI_API_KEY` | `no-key` | API key for AI service |
-| `AI_MODEL` | — | Default Brain model |
-| `BRAIN_MAX_TOKENS` | `0` (unlimited) | Brain output token limit |
-| `CEREBELLUM_MODEL` | — | Cerebellum model for memory tasks |
-| `CEREBELLUM_BASE_URL` | (reuses AI_BASE_URL) | Separate cerebellum endpoint |
-| `CEREBELLUM_API_KEY` | (reuses AI_API_KEY) | Separate cerebellum API key |
-| `CEREBELLUM_MAX_TOKENS` | `0` (unlimited) | Cerebellum output token limit |
-
-### Discord
-
-Discord integration is now managed through the **External Channels** system (`outer_channels` table), not environment variables. Each channel stores its own credentials (webhook URL or bot token) in the database.
+| `JWT_SECRET` | (auto-generated on first start) | JWT signing secret |
+| `COOKIE_SECRET` | (auto-generated on first start) | Cookie signing secret |
+| `TURNSTILE_SITE_KEY` | — | Cloudflare Turnstile site key (optional) |
+| `TURNSTILE_SECRET_KEY` | — | Cloudflare Turnstile secret key (optional) |
 
 ### Docker Containers
 
@@ -230,19 +230,24 @@ Discord integration is now managed through the **External Channels** system (`ou
 |----------|---------|-------------|
 | `DOCKER_SOCKET_PATH` | `/var/run/docker.sock` | Docker socket path |
 | `DOCKER_HOST` | — | Remote Docker API (alternative to socket) |
-| `DOCKER_WORKSPACE_HOST_PATH` | — | Host path for workspace volume |
-| `CONTAINER_CPU_QUOTA` | `50000` | CPU quota (50% of one core) |
-| `CONTAINER_MEMORY_LIMIT` | `536870912` | Memory limit (512MB) |
-| `CONTAINER_MAX_PER_AGENT` | `10` | Max containers per agent |
-| `CONTAINER_BACKEND` | `docker` | Container backend (docker or coolify) |
+| `HOST_DATA_DIR` | — | Host-side absolute path of `./office` (for Docker-in-Docker child mounts) |
+| `HOST_WORKSPACE_DIR` | — | Host-side absolute path of `./workspace` |
+| `HOST_SOURCE_DIR` | — | Host-side absolute path of the worktree |
+| `DOCKER_WORKSPACE_HOST_PATH` | — | Legacy alias retained for backwards compatibility |
+| `CONTAINER_CPU_QUOTA` | `50000` | CPU quota (50% of one core; `100000` = 100%) |
+| `CONTAINER_MEMORY_LIMIT` | `512m` | Memory limit |
+| `CONTAINER_MAX_PER_AGENT` | `5` | Max containers per agent |
+| `CONTAINER_BACKEND` | `docker` | Container backend (`docker` or `coolify`) |
 
-### Authentication
+### External Integrations
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `JWT_SECRET` | (auto-generated) | JWT signing secret |
-| `TURNSTILE_SITE_KEY` | — | Cloudflare Turnstile site key (optional) |
-| `TURNSTILE_SECRET_KEY` | — | Cloudflare Turnstile secret key |
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_BOT_TOKEN` | Discord adapter token (optional; per-channel tokens can also be stored per `outer_channels` row) |
+| `TELEGRAM_BOT_TOKEN` | Telegram adapter token (optional) |
+| `NOTIFICATIONS_SOURCE_URL` | Remote notice URL (default `https://www.thinkroid.space/notice.json`) |
+
+Discord and Telegram integrations can also be fully managed through the **External Channels** system (`outer_channels` table) — each channel row stores its own credentials.
 
 ---
 
@@ -253,8 +258,8 @@ Discord integration is now managed through the **External Channels** system (`ou
 - **Task execution** is centralized in `taskExecutor.js`. `executeTask(taskId)` is the single entry point for running a task. Internal services (idleLoop, cronScheduler, delegate-task) call it directly — no internal HTTP `fetch()` calls and no auth bypass. `routes/tasks.js` is a thin HTTP wrapper around the same function. `createTaskInternal()` in the same module handles programmatic task creation with immediate execution.
 - **Tool system** uses auto-discovery: any `.js` file in `services/tools/` that exports `{ defaultPermission, definition, executor }` is automatically registered at startup.
 - **Tool permissions** have four levels: `auto` (execute immediately), `confirm` (Boss approval queue), `always_confirm` (per-agent hook via `tool_approval` capability — triggers `tryAgentApproval()` before execution), and `deny` (blocked). `checkPermission()` returns `always_confirm` as a distinct value; the tool dispatcher routes it through the designated approval agent found via `findAgentWithCapability('tool_approval')`.
-- **Agent Templates** (`AGENT_TEMPLATES` in `governanceEngine.js`) define 10 pre-built role configurations. Calling `applyTemplate(agentId, templateId)` atomically sets the agent's persona, specialty, governance capabilities, and org role.
-- **Governance capabilities** number 23 across 6 categories (monitoring, communication, analysis, control, approval, reporting). The `tool_approval` capability (kind: `hook`, category: `approval`) designates an agent as the tool-use approver; its `params` field scopes which tools it covers. The `notification_reader` capability (kind: `hook`) designates an agent to filter governance notifications before they reach Boss. Agent color in the UI (`governance_color`) is computed server-side from the agent's highest-priority active capability category.
+- **Agent Templates** (`AGENT_TEMPLATES` in `governanceEngine.js`) define 11 pre-built role configurations (Manager, Accountant, InternalAuditor, Sentinel, Evaluator, ToolUseManager, NotificationReader, and others); the hire wizard adds a Custom entry for a total of 12 creation options. Calling `applyTemplate(agentId, templateId)` atomically sets the agent's persona, specialty, governance capabilities, and org role.
+- **Governance capabilities** number 22 across 6 categories: `management` (5), `finance` (3), `quality` (1), `monitoring` (9), `evaluation` (2), `approval` (1) — plus the `notification_reader` capability. `kind` is one of `permission`, `hook`, or `skill`. The `tool_approval` capability (kind: `hook`, category: `approval`) designates an agent as the tool-use approver; its `params` field scopes which tools it covers. The `notification_reader` capability (kind: `hook`) designates an agent to filter governance notifications before they reach Boss. Agent color in the UI (`governance_color`) is computed server-side from the agent's highest-priority active capability category.
 - **Governance channel separation** — `governanceRouter.js` centralizes all governance output. Every governance event (janitor, review, intervention, budget alert) writes to `channel='governance'` in the messages table. `channel='boss'` is reserved for Boss ↔ Agent conversations. The Dashboard Governance tab reads the governance channel directly from DB (persistent across page refreshes). The Message Center shows only notifications approved by the `notification_reader` agent (or auto-notify fallback for intervention/budget_alert).
 - **No seed agents** — `db.js` no longer inserts default agents at startup. Agents are created by the user or via the Hire panel.
 - **Capability-based lookups** — internal services use `findAgentWithCapability(capabilityId)` to locate the right specialist agent rather than hard-coded role name fallbacks.

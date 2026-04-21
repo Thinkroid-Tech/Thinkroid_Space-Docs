@@ -22,9 +22,7 @@ Each task card shows:
 - Current status
 - Project it belongs to
 
-You can drag and drop task cards between columns to manually update their status. Click any card to open it and see the full output, comments, and history.
-
-Tasks can also have **comments** — both you and agents can leave notes on a task as work progresses. This keeps the full history of a task in one place.
+You can drag and drop task cards between columns to manually update their status. Click any card to open it and see the full output, rejection reason, and parent / sub-task relationships.
 
 ---
 

@@ -10,56 +10,67 @@ By default, agents are fairly conservative. As you build trust with a particular
 
 Open the **Governance panel** by clicking the 🏛 button in the right sidebar under the Tools category. The panel has three tabs:
 
-- **Abilities** — Lists all 21 capabilities with their descriptions. Capabilities that have configurable prompts show an Edit Prompts button to customize the system and user prompt blocks for that ability.
+- **Abilities** — Lists all 22 capabilities with their descriptions. Capabilities that have configurable prompts show an Edit Prompts button to customize the system and user prompt blocks for that ability.
 - **Agents** — A read-only overview of which agents currently have governance abilities assigned, shown as color-coded badges.
-- **Rules** — Unified rules management. Create, edit, enable/disable, and delete rules with a scope selector (company / project / org / department / room) and optional conditions (scenes, agents, hint text).
+- **Rules** — Unified rules management. Create, edit, enable/disable, and delete rules with a scope selector (company / org / department / project / room) and optional conditions (scenes, agents, hint text).
 
 ---
 
 ## Capabilities
 
-There are 21 capabilities you can grant or revoke per agent, organized into four categories.
+There are 22 capabilities you can grant or revoke per agent, organized into six categories.
 
-### Permissions
+### Management (5)
 
-These control the core operational abilities agents have:
+Coordination, team awareness, and the notification firewall:
 
 - **Task Assignment** — Agent can create and assign new tasks to other agents or itself.
 - **Team Awareness** — Agent can see what other agents are working on and their current status.
 - **Escalation** — Agent can escalate problems up the chain — flagging blockers, requesting more resources, or pulling in a manager.
-- **Token Tracking** — Agent actively monitors its own token consumption and reports usage.
 - **Cron Management** — Agent can schedule recurring jobs (e.g. "run this check every morning at 9am").
 - **Container Management** — Agent can spin up and manage Docker containers to run code or services.
+- **Notification Reader** — Agent reads the governance feed and classifies each event as NOTIFY (forward to Boss) or SKIP (archive), keeping your inbox from being drowned by routine patrol messages.
 
-### Skills (Automated Monitoring)
+### Finance (3)
 
-These are automated background tasks that agents can run to keep things healthy:
+Cost visibility and budget enforcement:
 
+- **Token Tracking** — Reads AI call logs (tokens, model, timestamp, agent, task) to keep usage data accurate.
 - **Cost Reporting** — Periodically summarizes spending so you always know what things cost.
 - **Budget Monitoring** — Watches total spend and warns you (or takes action) if you're approaching your limit.
+
+### Quality (1)
+
+Output review and audit:
+
+- **Output Review** — Evaluates completed task outputs against PASS / FLAG / FAIL / CRITICAL; findings are written to the governance feed for follow-up.
+
+### Monitoring (9)
+
+Automated background checks that keep the workspace healthy:
+
 - **Orphan Detection** — Finds tasks that have no assigned agent and flags them for reassignment.
 - **Stuck Detection** — Identifies tasks that haven't made progress and surfaces them for review.
 - **Retry Monitoring** — Tracks tasks that have been retried multiple times and alerts you if something keeps failing.
-- **Result Validation** — Checks that completed task outputs actually meet the success criteria.
+- **Result Validation** — Checks that completed task outputs are not empty or malformed.
 - **Token Monitoring** — Watches token usage across all agents and highlights anomalies.
-- **Stall Detection** — Catches agents that are alive but not doing anything useful.
-- **Load Balancing** — Redistributes work if some agents are overwhelmed and others are idle.
-- **Entropy Calculation** — Measures how chaotic or unpredictable the overall workload is becoming.
+- **Stall Detection** — Catches projects that are alive but making no forward progress.
+- **Load Balancing** — Spots uneven workload distribution across agents.
+- **Intervention** — Acts on stuck tasks (block / reassign / retry / notify). Depends on Stuck Detection.
+- **Entropy Calculation** — Measures how chaotic the overall workspace is becoming (blocked tasks, unread messages, low morale, stalled work).
+
+### Evaluation (2)
+
+Performance and fit reviews:
+
 - **Performance Review** — Generates regular summaries of how well each agent is performing.
-- **Model Fit Review** — Evaluates whether the AI model assigned to an agent is the best fit for its workload.
+- **Model Fit Review** — Evaluates whether the AI model assigned to an agent is the best fit for its workload. Depends on Performance Review.
 
-### Hooks (Quality Control)
-
-These fire at key moments in a task's lifecycle:
-
-- **Output Review** — Before a task is marked complete, the agent's output is reviewed against the requirements.
-- **Intervention** — Allows the system (or you) to step in and modify an agent's behavior mid-task.
-
-### Approval
+### Approval (1)
 
 Controls whether this agent can participate in the tool approval pipeline:
 
-- **Tool Approval** (`tool_approval`) — This agent reviews incoming tool-use requests from other agents and decides whether to approve, deny, or escalate each one. Highlighted in orange in the capability list.
+- **Tool Approval** (`tool_approval`) — This agent intercepts incoming tool-use requests from other agents that are flagged `always_confirm`, and decides APPROVE / DENY / ESCALATE. Highlighted in orange in the capability list.
 
 ---
 
@@ -76,6 +87,7 @@ Setting up capabilities one by one can be tedious. Templates give you a pre-buil
 | **WorkflowJanitor** | Agents that clean up stalled, orphaned, or stuck work |
 | **Evaluator** | Agents that assess performance and fit |
 | **ToolUseManager** | Agents that handle the tool approval pipeline |
+| **NotificationReader** | Agents that triage the governance feed and forward only items worth your attention |
 | **Architect** | Agents focused on system design and technical planning |
 | **Developer** | Agents that write and review code |
 | **Tester** | Agents that validate outputs and run quality checks |

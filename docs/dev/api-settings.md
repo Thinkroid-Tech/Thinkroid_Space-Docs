@@ -7,9 +7,10 @@ Read all global settings (space name, provider IDs, office dimensions, ambiance,
 Returns key-value settings object. Includes `debug_mode` (`"true"` or `"false"`).
 
 ### `PUT /api/settings`
-Update global settings. Automatically rescales room walls when office dimensions change.
-Body: any subset of allowed setting keys.
+Batch-update global settings. Body is a flat `{ key: value, ... }` map — any subset of allowed keys. Automatically rescales room walls when office dimensions change.
 Returns `{ success: true }`. Requires `manage_settings`.
+
+> The `GET/PUT /api/settings/:key` single-key variants do not exist — all KV reads and writes go through the root batch endpoints.
 
 ### `GET /api/settings/check-custom-prompts`
 Check whether any agent has custom scene or governance prompt overrides.
@@ -204,9 +205,15 @@ Returns `{ name, description, enabled, approvalMode, defaultPermission }[]`.
 Resolve a pending inline tool approval.
 Body: `{ approved: boolean }` — Returns `{ ok: true }`. Requires `use_athena`.
 
+### `POST /api/athena/ui-result/:requestId`
+Return the result of a UIBridge request (read / fill / click) back to the Athena tool executor.
+Body: UIBridge result payload. Requires `use_athena`.
+
 ---
 
 ## Skills
+
+All Skills, MCP server, and per-agent tool-binding endpoints live under the single `/api/skills` prefix. A legacy `/api/mcp/*` prefix does not exist — MCP endpoints are exposed as `/api/skills/mcp-servers/*`. A compat endpoint `GET /api/tools` also returns the registered tool definitions for UI consumption.
 
 ### `GET /api/skills/builtin-tools`
 List all built-in tool definitions.

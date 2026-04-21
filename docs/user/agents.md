@@ -56,7 +56,7 @@ The agent's visual appearance in the office. Choose from the available pixel-art
 
 ## Agent Templates
 
-When hiring, the first wizard step asks you to pick a template. There are 10 built-in templates:
+When hiring, the first wizard step asks you to pick a template. There are **11 predefined templates plus a Custom (blank) entry** for a total of 12 starting points:
 
 **Governance templates** — these agents keep your workspace healthy and under control:
 
@@ -68,7 +68,8 @@ When hiring, the first wizard step asks you to pick a template. There are 10 bui
 | **Sentinel** | Monitors for stuck tasks and system health issues, automatically takes corrective action |
 | **WorkflowJanitor** | Cleans up orphaned tasks, detects retry failures, monitors project health |
 | **Evaluator** | Reviews agent performance scores and recommends whether a model upgrade or downgrade is appropriate |
-| **ToolUseManager** | Reviews incoming tool requests from other agents, then auto-approves, denies, or escalates each one based on configured rules |
+| **ToolUseManager** | Reviews incoming tool requests from other agents, then auto-approves, denies, or escalates each one |
+| **NotificationReader** | Filters the governance feed for you — forwards items worth your attention and archives routine noise |
 
 **Role templates** — general-purpose agents for common work:
 
@@ -78,7 +79,9 @@ When hiring, the first wizard step asks you to pick a template. There are 10 bui
 | **Developer** | Writes and reviews code, implements features, debugs issues |
 | **Tester** | Creates test cases, runs quality checks, validates outputs against requirements |
 
-Each template comes pre-configured with a suitable persona, specialty, default capabilities, and multi-language labels. These are starting points — you can customize any settings after hiring, or mix and match capabilities when creating a custom agent.
+**Custom** — start from a blank slate and configure everything yourself.
+
+Each predefined template comes pre-configured with a suitable persona, specialty, default capabilities, and multi-language labels. These are starting points — you can customize any settings after hiring, or mix and match capabilities when creating a custom agent.
 
 ---
 
@@ -98,13 +101,12 @@ When you're confident in the new agent, you can promote them from Shadow Mode to
 
 ## Offboarding
 
-When you remove an agent, the platform runs an offboarding process instead of simply deleting them:
+Removing an agent is a two-step flow. You can run them separately — preview the handover first, then confirm deletion.
 
-1. The agent writes a handover document summarizing their current work and knowledge
-2. Key memories are exported as a **Legacy** file
-3. The agent writes a note to their successor
+1. **Offboard** — the agent generates a handover document summarizing current work, key memories are exported as a **Legacy** file, and a note is written for their successor. The agent row is still in place, so you can review the Legacy before committing.
+2. **Delete** — the agent row, workspace room, and working-memory directory are removed. If offboarding hasn't run yet, the platform will try to generate a Legacy first. **Legacy and Handover files always survive deletion** so a future hire can still learn from them.
 
-New agents you hire later can **inherit this legacy** — loading the departing agent's accumulated knowledge as a starting point. This means switching to a better model doesn't mean losing everything the previous agent learned.
+New agents you hire later can **inherit this legacy** — loading the departing agent's accumulated knowledge as a starting point. Switching to a better model doesn't mean losing everything the previous agent learned.
 
 ---
 

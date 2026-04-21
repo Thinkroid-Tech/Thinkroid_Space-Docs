@@ -10,7 +10,7 @@ Returns `Agent[]`. Each agent object includes a computed `governance_color` fiel
 
 ### `POST /api/agents`
 Create a new agent. Automatically creates a workspace room and initializes position.
-Body: `{ name, role?, model_brain?, model_cerebellum?, base_url?, api_key?, shadow_mode? }`
+Body: `{ name, role?, avatar?, specialty?, model_brain?, brain_provider_id?, brain_max_tokens?, model_cerebellum?, cerebellum_provider_id?, cerebellum_max_tokens?, model_context_engine?, context_engine_provider_id?, context_engine_max_tokens?, shadow_mode? }`
 Returns `Agent` (201). Requires `manage_agents`.
 
 ### `GET /api/agents/roster`
@@ -22,11 +22,11 @@ List all 22 governance capability definitions with category and kind metadata. I
 Returns `{ capabilities, categories, kinds, kindLabels }`.
 
 ### `GET /api/agents/governance/templates`
-List all 5 pre-configured governance templates (Manager, Accountant, InternalAuditor, Sentinel, Evaluator).
+List all 11 pre-configured Agent Templates from `AGENT_TEMPLATES` in `governanceEngine.js` (Manager, Accountant, InternalAuditor, Sentinel, Evaluator, ToolUseManager, NotificationReader, and others).
 Returns `Template[]`.
 
 ### `GET /api/agents/agent-templates`
-List all 10 Agent Templates defined in `AGENT_TEMPLATES` inside `governanceEngine.js`. Each template bundles a persona, specialty, governance capabilities, and org role into a single configuration that can be applied to any agent.
+List all 11 Agent Templates defined in `AGENT_TEMPLATES` inside `governanceEngine.js`, plus a Custom entry used by the hire wizard (12 creation options total). Each template bundles a persona, specialty, governance capabilities, and org role into a single configuration that can be applied to any agent.
 Returns `AgentTemplate[]` — each entry has `{ id, name, description, persona, specialty, capabilities, orgRole }`.
 
 ### `GET /api/agents/:id`
@@ -35,11 +35,11 @@ Returns `Agent`.
 
 ### `PUT /api/agents/:id`
 Update agent fields. Masked API keys are ignored.
-Body: any subset of `{ name, role, model_brain, model_cerebellum, base_url, api_key, status, shadow_mode, specialty }`
+Body: any subset of `{ name, role, avatar, specialty, model_brain, brain_provider_id, brain_max_tokens, model_cerebellum, cerebellum_provider_id, cerebellum_max_tokens, model_context_engine, context_engine_provider_id, context_engine_max_tokens, status, shadow_mode, morale }`
 Returns `Agent`. Requires `manage_agents`.
 
 ### `DELETE /api/agents/:id`
-Fire an agent. Runs offboarding, cleans up relations, deletes workspace room and memory files. Blocked if agent has active governance capabilities.
+Fire an agent immediately. Generates a legacy file, cleans up management relations, and deletes the agent's workspace room and memory files.
 Query: `?legacy=1` to skip re-generating an existing legacy.
 Returns `204 No Content`. Requires `manage_agents`.
 
@@ -162,7 +162,7 @@ Body: memory config fields.
 Returns `{ success: true }`. Requires `manage_agents`.
 
 ### `GET /api/agents/:name/memory/:type`
-Read raw memory content. `type`: `short`, `long`, `persona`, or `project`.
+Read raw memory content. `type`: `short`, `long`, or `skill` (stored as JSON files under `@me/memory/<agent_name>/{short,long,skill}.json`).
 Returns `{ type, content }`.
 
 ### `PUT /api/agents/:name/memory/:type`
@@ -264,9 +264,11 @@ Delete a task.
 Returns `{ ok: true }`. Requires `manage_tasks`.
 
 ### `POST /api/tasks/:id/execute`
-Execute a task. Runs the full AI + tool-use loop; enforces per-agent concurrency limits.
+Execute a task. Thin HTTP wrapper around `executeTask()` that runs the full AI + tool-use loop and enforces per-agent concurrency limits. Returns `409 Conflict` if the task is not in `pending` state.
 Returns `{ success, taskId, result, moraleWarning? }`. Requires `manage_tasks`.
+
+> There is no `POST /api/tasks/:id/interrupt` or `POST /api/tasks/:id/retry` endpoint. Interruption is triggered by sending a Chat message through the `taskExecutor`'s interrupt label channel; retries are performed by writing `status` back to `pending` via `PUT /api/tasks/:id` (done by governance or Boss).
 
 ### `GET /api/tasks/:id/stream`
 SSE stream for real-time task execution progress.
-Returns SSE stream — events: `connected`, `start`, `tool_use`, `tool_result`, `done`, `error`.
+Returns SSE stream — event types: `connected`, `start`, `tool_use`, `done`, `error`.

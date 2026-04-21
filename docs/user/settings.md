@@ -187,7 +187,7 @@ The Governance panel has up to three tabs: **Abilities** (admin + debug mode onl
 
 ### Abilities
 
-Configure the global default governance prompt templates. Thinkroid Space has 21 governance abilities — behaviors that agents can perform autonomously as part of their role (output review, intervention, janitor sweeps, audits, handovers, and more).
+Configure the global default governance prompt templates. Thinkroid Space has 22 governance abilities — behaviors that agents can perform autonomously as part of their role (output review, intervention, janitor sweeps, notification filtering, handovers, and more).
 
 Each ability has a default prompt that controls how it behaves. All agents inherit these defaults unless they override them individually in their Agent Settings > Governance tab. Click **Edit Prompts** next to any ability to customize its default prompt text.
 
@@ -203,9 +203,11 @@ To modify an agent's governance abilities, go to that agent's Settings > Governa
 
 Manage all rules that guide agent behavior across your workspace. Rules from all organizational levels are unified in one place.
 
-**Scope** — use two linked dropdowns to select the scope for your rules:
-- First choose a **category**: Company, Project, Organization, Department, or Room
-- Then choose the specific **entity** within that category (e.g. which project or department)
+**Scope** — use two linked dropdowns to select the scope for your rules. Five scope categories are supported:
+- First choose a **category**: Company, Organization, Department, Project, or Room
+- Then choose the specific **entity** within that category (e.g. which organization or project)
+
+Rules from all matching scopes are aggregated and injected into the agent's context together; there is no "more specific overrides less specific" inheritance at runtime.
 
 Each rule has:
 - **Category** — a grouping label (e.g. "code_quality", "communication")

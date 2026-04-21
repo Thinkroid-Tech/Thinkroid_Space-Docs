@@ -103,21 +103,23 @@ Plain ES module at `thinkroid-space-ui/src/uiBridge.js`. No React dependency. Th
 ## Communication Flow
 
 ```
-Read:  Athena tool → SSE {type: "ui_read", requestId}
+Read:  Athena tool → SSE { type: "ui_read", request_id }
                    → AthenaPanel handles SSE → scanUI()
                    → POST /api/athena/ui-result/:requestId
                    → Promise resolves in backend tool executor
 
-Fill:  Athena tool → SSE {type: "ui_fill", requestId, field, value}
+Fill:  Athena tool → SSE { type: "ui_fill", request_id, field, value }
                    → AthenaPanel handles SSE → fillField(field, value)
                    → POST /api/athena/ui-result/:requestId
                    → Promise resolves
 
-Click: Athena tool → SSE {type: "ui_click", requestId, action, confirmDangerous}
+Click: Athena tool → SSE { type: "ui_click", request_id, action, confirmDangerous }
                    → AthenaPanel handles SSE → clickButton(action, confirmDangerous)
                    → POST /api/athena/ui-result/:requestId
                    → Promise resolves
 ```
+
+The UIBridge events are streamed on the per-request `POST /api/athena/chat` SSE response (not the global `/api/events/stream`), alongside the Athena chat tokens and inline approval events.
 
 This matches the existing approval flow pattern (`pendingAthenaApprovals` → `pendingUIRequests`).
 
@@ -135,7 +137,7 @@ Buttons tagged with `data-athena-dangerous="true"` are blocked unless `confirmDa
 
 - **Settings**: SpaceSettings, GovernancePanel, PermissionSettings, UserManagement
 - **Agents**: AgentPanel, AgentSettings, AgentSkillsPanel, AgentTaskPanel, HirePanel
-- **Wizard**: SetupWizard, OnboardingWizard and all 9 step components
+- **Wizard**: SetupWizard, OnboardingWizard and all 9 OnboardingStep*.jsx components (Template, BasicInfo, Persona, Department, Skills, Models, ExternalConnection, Legacy, Review)
 - **Tasks/Projects**: TaskBoard, Board, Dashboard
 - **Communication**: BossChatPanel, BulletinBoard, MeetingRoom, ChatLog, MessageCenter, ChatWindow
 - **Infrastructure**: CronPanel, ContainerPanel, ExternalAgentsPanel, OuterChannelsOverlay

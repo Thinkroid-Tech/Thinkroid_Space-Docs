@@ -221,29 +221,29 @@ events are plain strings with an optional payload object.
 
 ### SSE → mitt (bridged in App.jsx)
 
-SSE events from `/api/events/stream` are re-emitted on the mitt bus:
+SSE events from `/api/events/stream` are re-emitted on the mitt bus (most share the same name):
 
 | SSE type | mitt event | Consumers |
 |----------|-----------|-----------|
-| `agent:move` | `agent:server-move` | OfficeScene (move sprite) |
+| `agent:move` | `agent:move` | OfficeScene (move sprite) |
 | `agent:morale-changed` | `agent:morale-changed` | OfficeScene (update morale bar) |
 | `agent:status` | `agent:status` | OfficeScene (update status icon) |
 | `agent:thinking` | `agent:thinking` | OfficeScene (update thinking text) |
 | `stats:refresh` | `stats:refresh` | StatsBar |
-| `task:created`, `task:updated` | `task:list-changed` | TaskBoard, AgentTaskPanel |
+| `task:created`, `task:updated`, `task:completed` | same | TaskBoard, AgentTaskPanel (re-fetch on each) |
+| `task:interrupted`, `task:resuming` | same | TaskBoard detail view |
 | `agent:chat` | `agent:chat` | ChatOverlay, ChatLog |
 | `bulletin:new` | `bulletin:new` | BulletinBoard |
 | `approval:requested` | `approval:requested` | ApprovalToast, App badge count |
-| `approval:resolved` | `approval:resolved` | ApprovalToast, App badge count |
-| `meeting:started` | `meeting:started` | MeetingRoom |
-| `meeting:speech` | `meeting:speech` | MeetingRoom |
-| `meeting:concluded` | `meeting:concluded` | MeetingRoom |
-| `governance:janitor` | `governance:janitor` | SpaceSettings debug tab |
-| `governance:budget_alert` | `governance:budget_alert` | StatsBar |
-| `governance:review` | `governance:review` | Dashboard |
+| `approval:resolved`, `approval:agent_decided` | same | ApprovalToast, App badge count |
+| `meeting:started`, `meeting:speech`, `meeting:concluded` | same | MeetingRoom |
+| `conversation:created`, `conversation:message`, `conversation:speech`, `conversation:concluded` | same | ChatWindow, ChatLog |
+| `governance:new_event` | `governance:new_event` | Dashboard Governance tab re-fetches |
+| `governance:${eventType}` | same | Dashboard / StatsBar / SpaceSettings (by dynamic `eventType`, e.g. `janitor`, `review`, `intervention`, `budget_alert`, `performance_review`) |
 | `notification:new` | `notification:new` | App badge count, MessageCenter |
-| `cron:executed` | `cron:executed` | CronPanel |
-| `cron:updated` | `cron:updated` | CronPanel |
+| `cron:executed`, `cron:updated` | same | CronPanel |
+| `outer_chat:incoming`, `outer_chat:auto_reply`, `outer_chat:sent` | same | OuterChannelsOverlay, ChatLog |
+| `skills:updated` | `skills:updated` | SkillLibrary |
 
 ---
 
@@ -258,10 +258,10 @@ REST paths the component calls directly.
 | Component | Purpose | Key API Endpoints |
 |-----------|---------|-------------------|
 | `HUD.jsx` | Top bar: space name, settings button, edit mode toggle, user menu | `GET /api/settings` |
-| `StatsBar.jsx` | Always-visible bottom bar: token budget, morale, task counts | `GET /api/stats` |
-| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/stats`, `GET /api/agents`, `POST /api/agents/:name/rest` |
+| `StatsBar.jsx` | Always-visible bottom bar: token budget, morale, task counts | `GET /api/agents`, `GET /api/tasks` (re-fetched on `stats:refresh` SSE) |
+| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/agents`, `POST /api/agents/:name/rest`, `GET /api/messages?channel=governance` |
 | `AgentPanel.jsx` | Clicked-agent detail panel with tabs for chat, tasks, settings, memory | `GET /api/settings/debug` |
-| `AgentSettings.jsx` | Full per-agent configuration: models, tools, governance, avatar, persona | `GET /api/settings/avatars`, `GET /api/settings/providers`, `GET /api/tools`, `GET /api/agents/governance/*`, `GET /api/agents` |
+| `AgentSettings.jsx` | Full per-agent configuration: models, tools, governance, avatar, persona | `GET /api/settings/avatars`, `GET /api/settings/providers`, `GET /api/tools` (compat) or `GET /api/skills/builtin-tools`, `GET /api/agents/governance/capabilities`, `GET /api/agents/governance/templates`, `GET /api/agents` |
 | `AgentTaskPanel.jsx` | In-panel task list and task creation for a specific agent | `GET /api/tasks`, `GET /api/projects`, `POST /api/tasks` |
 | `AgentSkillsPanel.jsx` | Per-agent skill assignment: toggle built-in tools and MCP skills | `GET /api/skills` |
 | `MemoryPanel.jsx` | Agent long-term memory viewer and editor (multiple memory types) | `GET/PATCH /api/agents/:name/memory/:type`, `GET /api/agents/:name/memory-stats`, `POST /api/agents/:name/memory/consolidate` |
@@ -277,7 +277,7 @@ REST paths the component calls directly.
 | `ChatOverlay.jsx` | Floating live feed of recent agent messages, lazy loading (30/batch) | `GET /api/messages/all-chats?limit=30&before=...` |
 | `BulletinBoard.jsx` | Read/post messages on the public bulletin channel | `GET /api/messages?channel=bulletin`, `POST /api/messages` |
 | `MeetingRoom.jsx` | Start and observe AI multi-agent meetings in real time | `GET /api/meeting/list`, `GET /api/agents`, `POST /api/meeting/start` |
-| `MessageCenter.jsx` | System notification inbox with read/unread management | `GET /api/notifications`, `PUT /api/notifications/:id/read`, `PUT /api/notifications/read-all` |
+| `MessageCenter.jsx` | System notification inbox with read/unread management, search, filters, batch read/delete | `GET /api/notifications/filters`, `GET /api/notifications`, `PUT /api/notifications/:id/read`, `PUT /api/notifications/read-all`, `PUT /api/notifications/batch-read`, `DELETE /api/notifications/batch-delete`, `DELETE /api/notifications/delete-all-read` |
 | `OuterChannelsOverlay.jsx` | Configure Discord/Telegram integrations and per-agent channel routing | `GET /api/outer-channels`, `GET /api/agents`, `POST/PUT /api/outer-channels`, `POST /api/outer-channels/test-config` |
 | `AthenaPanel.jsx` | AI assistant overlay (Cmd+/): context-aware help, tool execution, multi-turn chat | `GET /api/athena/prompt-defaults`, `GET /api/athena/tools`, `POST /api/athena/chat`, `POST /api/athena/compact` |
 
@@ -294,7 +294,7 @@ REST paths the component calls directly.
 
 | Component | Purpose | Key API Endpoints |
 |-----------|---------|-------------------|
-| `TaskBoard.jsx` | Simple task list with create/filter/assign, driven by SSE `task:list-changed` | `GET /api/tasks`, `GET /api/agents`, `GET /api/projects`, `POST /api/tasks` |
+| `TaskBoard.jsx` | Simple task list with create/filter/assign, driven by SSE `task:created` / `task:updated` / `task:completed` events | `GET /api/tasks`, `GET /api/agents`, `GET /api/projects`, `POST /api/tasks` |
 | `Board.jsx` | Full kanban board: projects, tasks by status, batch-execute | `GET /api/projects`, `GET /api/organizations`, `GET /api/agents`, `POST /api/tasks`, `POST /api/tasks/batch-execute` |
 | `TaskForm.jsx` | Reusable task creation form (modal) | `POST /api/tasks` |
 | `TaskResult.jsx` | Read-only task result display (embedded in task detail views) | — |
@@ -335,14 +335,15 @@ REST paths the component calls directly.
 | Component | Purpose | Key API Endpoints |
 |-----------|---------|-------------------|
 | `OnboardingWizard.jsx` | Multi-step wizard shell that sequences the step components | — |
-| `OnboardingStepBasicInfo.jsx` | Step 1 — agent name, avatar picker | `GET /api/settings/avatars` |
-| `OnboardingStepDepartment.jsx` | Step 2 — assign agent to department/org | `GET /api/organizations` |
-| `OnboardingStepPersona.jsx` | Step 3 — role, specialty, persona description | — |
-| `OnboardingStepSkills.jsx` | Step 4 — toggle skills and tools | `GET /api/skills`, `GET /api/tools` |
-| `OnboardingStepModels.jsx` | Step 5 — select brain and cerebellum AI providers | `GET /api/settings/providers` |
-| `OnboardingStepGovernance.jsx` | Step 6 — governance capability selection | — |
-| `OnboardingStepReview.jsx` | Step 7 — review and submit: creates the agent | `GET /api/settings/providers`, `POST /api/agents` |
-| `OnboardingStepLegacy.jsx` | Legacy import path for migrating older agent configs | `GET /api/legacies` |
+| `OnboardingStepTemplate.jsx` | Entry step — choose one of 11 `AGENT_TEMPLATES` or the Custom path (12 options total) | `GET /api/agents/agent-templates`, `GET /api/agents/governance/templates` |
+| `OnboardingStepBasicInfo.jsx` | Agent name + avatar picker | `GET /api/settings/avatars` |
+| `OnboardingStepPersona.jsx` | Role, specialty, persona description | — |
+| `OnboardingStepDepartment.jsx` | Assign agent to department/org | `GET /api/organizations`, `GET /api/departments` |
+| `OnboardingStepSkills.jsx` | Toggle skills and tools | `GET /api/skills`, `GET /api/tools` (compat) / `GET /api/skills/builtin-tools` |
+| `OnboardingStepModels.jsx` | Select brain, cerebellum and context-engine providers / models | `GET /api/settings/providers` |
+| `OnboardingStepExternalConnection.jsx` | External-agent connection setup for externally-hosted agents | `GET /api/external-agents`, `POST /api/external-agents/test-config` |
+| `OnboardingStepLegacy.jsx` | Inherit a departed agent's legacy file | `GET /api/legacies` |
+| `OnboardingStepReview.jsx` | Final review + submit: creates the agent, assigns capabilities, writes settings | `GET /api/settings/providers`, `POST /api/agents`, `PUT /api/agents/:name/settings`, `PUT /api/agents/:id/capabilities` |
 
 ### Auth
 
@@ -371,12 +372,14 @@ automatic reconnect; no custom reconnection logic is needed.
 
 **SSE event types handled:**
 
-`agent:move`, `agent:morale-changed`, `agent:status`, `agent:thinking`,
-`stats:refresh`, `task:created`,
-`task:updated`, `agent:chat`, `bulletin:new`, `approval:requested`,
-`approval:resolved`, `meeting:started`, `meeting:speech`, `meeting:concluded`,
-`governance:janitor`, `governance:budget_alert`, `governance:review`,
-`governance:intervention`, `notification:new`, `cron:executed`, `cron:updated`
+`agent:status`, `agent:thinking`, `agent:move`, `agent:chat`, `agent:morale-changed`,
+`task:created`, `task:updated`, `task:completed`, `task:interrupted`, `task:resuming`, `task:update`,
+`conversation:created`, `conversation:message`, `conversation:speech`, `conversation:concluded`,
+`meeting:started`, `meeting:speech`, `meeting:concluded`, `bulletin:new`,
+`notification:new`, `approval:requested`, `approval:agent_decided`, `approval:resolved`,
+`governance:new_event`, `governance:${eventType}` (dynamic),
+`cron:updated`, `cron:executed`, `outer_chat:incoming`, `outer_chat:auto_reply`, `outer_chat:sent`,
+`stats:refresh`, `skills:updated`.
 
 See the [Event Bus Protocol](#event-bus-protocol) table above for the full
 SSE → mitt mapping.
