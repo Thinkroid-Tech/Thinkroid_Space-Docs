@@ -95,4 +95,4 @@ Click **Approve** to proceed or **Deny** to cancel. Athena never makes changes s
 
 ## Panel Navigation
 
-When Athena suggests an action that involves a specific part of the interface, she will automatically open the relevant panel for you. For example, if she recommends hiring a new agent, the Hire panel opens directly. If she suggests reviewing pending approvals, the Approvals panel opens. This works across all 21 panels in the system — you never have to hunt for where something lives.
+When Athena suggests an action that involves a specific part of the interface, she will automatically open the relevant panel for you. For example, if she recommends hiring a new agent, the Hire panel opens directly. If she suggests reviewing pending approvals, the Approvals panel opens. This works across every panel in the system — you never have to hunt for where something lives.
