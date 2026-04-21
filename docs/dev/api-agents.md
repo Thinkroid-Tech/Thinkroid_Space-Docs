@@ -140,12 +140,12 @@ Query: `?type=<string>&page=1&limit=20`
 Returns `{ entries: [], total: 0, page, limit }`.
 
 ### `PUT /api/agents/:name/memory-entries/:entryId`
-Update a memory entry's tags or importance score.
+**Stubbed in the current build.** Signature is routable, but because the list endpoint returns no entries, no real `entryId` exists to update today. Planned activation with the `ThinkroidMemory` migration.
 Body: `{ tags?, importance? }`
-Returns `{ success: true }`. Requires `manage_agents`.
+Returns `{ success: true }` on write. Requires `manage_agents`.
 
 ### `DELETE /api/agents/:name/memory-entries/:entryId`
-Delete a structured memory entry.
+**Stubbed in the current build.** Same stub status as the `PUT` variant — reachable route, but with no addressable entries until structured memory ships.
 Returns `{ success: true }`. Requires `manage_agents`.
 
 ### `GET /api/agents/:name/memory-stats`

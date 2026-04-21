@@ -205,7 +205,7 @@ Returns SSE stream (`text/event-stream`). Initial event: `{ type: "connected" }`
 | `approval:agent_decided` | `{ approvalId, decision, decidedBy: 'agent', reason? }` |
 | `approval:resolved` | `{ approvalId, decision, decidedBy }` |
 | `governance:new_event` | `{}` — front-end re-fetches governance feed |
-| `governance:${eventType}` | `{ id, sender, content, eventType, priority, timestamp }` — `eventType` is dynamic (e.g. `janitor`, `review`, `intervention`, `budget_alert`, `performance_review`) |
+| `governance:${eventType}` | `{ id, sender, content, eventType, priority, timestamp }` — `eventType` is dynamic; values emitted today are `review`, `intervention`, `janitor`, `budget_alert`, and `tool_approval` |
 | `cron:updated` | `{ action, jobId, agentName?, timestamp? }` (action: `created`/`updated`/`deleted`/`approved`) |
 | `cron:executed` | `{ jobId, status, result?, error? }` |
 | `outer_chat:incoming` | `{ channel, message }` |

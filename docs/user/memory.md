@@ -22,7 +22,7 @@ Short-term memories are automatically created whenever an agent observes somethi
 
 Important information that gets promoted from short-term storage. Long-term memories persist across sessions and are available whenever the agent is working. This is where things like "Alice prefers concise summaries" or "the production database uses UTC timestamps" live.
 
-Promotion happens automatically when a memory is referenced frequently or flagged as important — but you can also manually promote entries from the Memory Panel.
+Promotion happens automatically during consolidation when a memory is referenced frequently or carries high importance. Manual per-entry promotion from the Memory Panel is a planned feature (see the Memory Panel note below) and is not yet available.
 
 ### Skill Memory (planned)
 
@@ -36,7 +36,7 @@ Memories don't last forever by default. Each memory has a relevance score that n
 
 Why does this exist? Without it, agents would accumulate enormous amounts of stale information that could actually interfere with good decision-making. An agent that remembers everything equally gives outdated information the same weight as current reality.
 
-Memories that get referenced frequently stay fresh longer. Memories that nobody looks at or uses will fade and eventually be removed. You can always pin important memories to prevent them from fading.
+Memories that get referenced frequently stay fresh longer. Memories that nobody looks at or uses will fade and eventually be removed. Manual pinning to protect a specific memory from decay is a planned Memory Panel feature (see the note below) and not yet available; until then, importance flags and reference frequency drive retention automatically.
 
 ---
 
