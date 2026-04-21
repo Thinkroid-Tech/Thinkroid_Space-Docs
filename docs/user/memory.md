@@ -24,9 +24,9 @@ Important information that gets promoted from short-term storage. Long-term memo
 
 Promotion happens automatically when a memory is referenced frequently or flagged as important — but you can also manually promote entries from the Memory Panel.
 
-### Skill Memory
+### Skill Memory (planned)
 
-Technical knowledge and learned abilities. This tier stores things like: which approach worked well for a certain type of problem, how to structure a particular kind of output, or what to watch out for in a given workflow. Skill memory is what makes an agent genuinely better at their job over time, not just more informed.
+A future tier intended for technical knowledge and learned abilities — the "how I handled this kind of problem last time" layer. Not yet persisted: today, anything an agent learns accumulates in short-term and long-term memory instead. The dedicated skill tier will arrive with the planned `ThinkroidMemory` migration.
 
 ---
 
@@ -55,19 +55,9 @@ You don't need to trigger this manually — it happens automatically. But you ca
 
 ## The Memory Panel
 
-Open an agent's profile and navigate to the Memory tab to see everything that agent currently remembers. Each entry shows:
+Open an agent's profile and navigate to the Memory tab to see memory stats (usage, capacity, consolidation config) and browse the raw persona / short-term / long-term memory files. You can also manually trigger a consolidation pass from here.
 
-- The memory content
-- Which tier it lives in (short-term or long-term — a dedicated skill tier is on the roadmap but not yet persisted)
-- Its current importance score
-- When it was last accessed
-
-From here you can:
-
-- **Pin** a memory to prevent it from fading
-- **Promote** a short-term memory to long-term manually
-- **Delete** a memory that's inaccurate or no longer relevant
-- **Add** a memory manually (useful for onboarding — you can pre-load an agent with knowledge about your organization)
+> **Heads-up — structured entry management is a placeholder.** The Memory Panel is wired up for a future per-entry workflow (pin / promote / delete / add individual memory entries), but the supporting endpoints are currently stubs that return an empty list pending the planned `ThinkroidMemory` migration. Until that ships, per-entry operations have nothing to act on; expected memory management is through the short / long / persona Markdown files and the automatic consolidation pipeline described above.
 
 ---
 

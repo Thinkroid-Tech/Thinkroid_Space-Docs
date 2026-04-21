@@ -429,7 +429,7 @@ Both functions broadcast their results to connected clients via `broadcastAgentE
 `services/governanceRouter.js` is the centralized gateway for all governance output. Every governance action calls `persistGovernanceOutput()`, which:
 
 1. Inserts a row into the `governance_events` table (decoupled from the generic `messages` table; source code comment: "Persist governance output to the governance_events table (not messages)")
-2. Broadcasts an SSE event named `governance:${eventType}`. The emitted event types today are `governance:review`, `governance:intervention`, `governance:janitor`, `governance:budget_alert`, and `governance:tool_approval`.
+2. Broadcasts an SSE event named `governance:${eventType}`. The emitted event types today are `governance:review`, `governance:intervention`, `governance:janitor`, `governance:budget_alert`, and `governance:tool_approval`. Tool-approval code paths additionally emit a lightweight `governance:new_event` ping (payload `{}`) as a "something new landed, please re-fetch the feed" signal — both signals are expected, not duplicates.
 3. Calls `routeGovernanceNotification()` to decide whether to notify Boss
 
 **Notification routing flow:**
@@ -467,6 +467,8 @@ Fallback (no `notification_reader` assigned): only `intervention` and `budget_al
 **Data migration (legacy):**
 
 On server startup, any historical `[Auto Review]` or `[Intervention]` rows still sitting in the `messages` table under `channel='boss'` are moved to `channel='governance'` so they don't leak back into Boss Chat. This is purely legacy cleanup — new governance events are written directly to the `governance_events` table, never to `messages`.
+
+> **Known audit-visibility gap:** the Dashboard Governance surface reads `/api/messages/governance-events`, which queries the `governance_events` table only. Historical rows migrated inside the `messages` table (channel `governance`) are therefore not visible through the documented dashboard endpoint. If you need to inspect pre-migration governance records, query the `messages` table directly with `channel='governance'` until those rows are backfilled into `governance_events` (not yet implemented).
 
 ---
 
