@@ -1,5 +1,7 @@
 # API: Communication & Content
 
+> **Identity in message payloads.** `messages.sender_id` is a UUID FK to `agents.id`. API responses include both `sender_id` and a pre-joined `sender_name` so consumers can render without a second fetch. DM channels are keyed on `dm:<uuid_low>:<uuid_high>` — two UUIDs sorted lexicographically, stable across renames.
+
 ## Messages
 
 ### `GET /api/messages/all-chats`
@@ -8,16 +10,16 @@ Query: `?limit=100&before=<ISO timestamp>` — Returns `Message[]`.
 
 ### `GET /api/messages`
 List messages with cursor-based pagination, optionally filtered by channel.
-Query: `?channel=<string>&limit=50&before=<ISO timestamp>` — default limit 50, max 500. Returns `Message[]` in ascending order.
+Query: `?channel=<string>&limit=50&before=<ISO timestamp>` — default limit 50, max 500. Returns `Message[]` in ascending order. Each message carries `sender_id` (UUID) and `sender_name` (display).
 
 ### `POST /api/messages/chat`
 Send a message to an AI chat channel and receive an AI reply. The `boss` channel routes through the Manager agent and auto-creates tasks on `[CREATE_TASK]` markers.
-Body: `{ channel, content, agentName?, agentRole?, priority? }`
-Returns `{ id, channel, sender, content, created_at, autoCreatedTasks? }`. Requires `send_messages`.
+Body: `{ channel, content, agentId?, agentRole?, priority? }`
+Returns `{ id, channel, sender_id, sender_name, content, created_at, autoCreatedTasks? }`. Requires `send_messages`.
 
 ### `POST /api/messages`
 Post a raw message to any channel (no AI reply).
-Body: `{ channel?, sender?, content }`
+Body: `{ channel?, sender_id?, content }`
 Returns `Message` (201). Requires `send_messages`.
 
 ### `DELETE /api/messages/:id`
@@ -29,12 +31,12 @@ Returns `{ ok: true }`. Requires `send_messages`.
 ## Conversations
 
 ### `GET /api/conversations`
-List conversations with optional filters.
-Query: `?type=meeting|dm&participant=<agentName>&status=active|archived` — Returns `Conversation[]`.
+List conversations with optional filters. `participants` on each row is a JSON array of agent UUIDs.
+Query: `?type=meeting|dm&participant_id=<uuid>&status=active|archived` — Returns `Conversation[]`.
 
 ### `GET /api/conversations/unread`
-Get unread conversation summaries for a specific agent.
-Query: `?agent=<agentName>` (required) — Returns `{ conversationId, channel, type, topic, unreadCount }[]`.
+Get unread conversation summaries for a specific agent. `read_cursors` is keyed on `(agent_id, conversation_id)`.
+Query: `?agent_id=<uuid>` (required) — Returns `{ conversationId, channel, type, topic, unreadCount }[]`.
 
 ### `GET /api/conversations/boss-unread`
 Get conversations with unread messages for the Boss.
@@ -53,13 +55,13 @@ Get paginated messages for a conversation.
 Query: `?limit=50&before=<ISO timestamp>` — Returns `Message[]`.
 
 ### `POST /api/conversations`
-Create a new conversation.
+Create a new conversation. `participants` is an array of agent UUIDs; the server records them in `conversations.participants` (JSON UUID array) and writes `created_by_id` as the current caller.
 Body: `{ type, participants: string[], topic?, maxRounds? }`
 Returns `Conversation` (201). Requires `manage_conversations`.
 
 ### `POST /api/conversations/:id/messages`
 Send a message into a conversation as Boss.
-Body: `{ content, sender?, priority? }`
+Body: `{ content, sender_id?, priority? }`
 Returns `Message` (201). Requires `manage_conversations`.
 
 ### `POST /api/conversations/:id/conclude`
@@ -67,8 +69,8 @@ End a conversation and generate an AI conclusion summary.
 Returns `{ conclusion, recordId, ... }`. Requires `manage_conversations`.
 
 ### `POST /api/conversations/:id/read`
-Mark a conversation as read for an agent.
-Body: `{ agent: string, lastMessageId? }` — Returns `{ ok: true }`. Requires `manage_conversations`.
+Mark a conversation as read for an agent. The `read_cursors` row is upserted against the composite key `(agent_id, conversation_id)`.
+Body: `{ agent_id: string, lastMessageId? }` — Returns `{ ok: true }`. Requires `manage_conversations`.
 
 ### `POST /api/conversations/:id/boss-read`
 Batch-mark messages as read for the Boss.
@@ -86,7 +88,7 @@ Returns `OuterChannel[]`.
 
 ### `POST /api/outer-channels`
 Create an external channel.
-Body: `{ name, type, theme?, rules?, permissions?, config?, owner_agent? }`
+Body: `{ name, type, theme?, rules?, permissions?, config?, owner_agent_id? }` — `owner_agent_id` is a UUID FK to `agents.id`.
 Returns `OuterChannel` (201).
 
 ### `POST /api/outer-channels/discord-channels`
@@ -179,39 +181,41 @@ Returns `{ success, count }`.
 Open a persistent SSE connection. Receives all system events from the server.
 Returns SSE stream (`text/event-stream`). Initial event: `{ type: "connected" }`.
 
+> **Payload identity rule.** Every per-agent event carries `agentId` (the UUID from `agents.id`) plus a pre-joined `displayName` for rendering. Consumers key their state on `agentId`; they never JOIN back to `agents` themselves.
+
 | Event | Payload |
 |-------|---------|
-| `agent:status` | `{ agentName, status, taskTitle? }` |
-| `agent:thinking` | `{ agentName, tool }` |
-| `agent:move` | `{ agentName, from, to, path }` |
-| `agent:morale-changed` | `{ agentName, morale, delta, reason? }` |
-| `agent:chat` | `{ channel, sender, target?, message\|content, priority? }` |
-| `task:created` | `{ taskId\|id, title, assigned_to?, assignedTo?, unassigned?, parentTaskId? }` |
-| `task:updated` | `{ taskId\|id, status?, deleted?, assigned_to? }` |
-| `task:interrupted` | `{ taskId, agentName, interruptedBy, snapshotRecordId }` |
-| `task:resuming` | `{ taskId, agentName }` |
+| `agent:status` | `{ agentId, displayName, status, taskTitle? }` |
+| `agent:thinking` | `{ agentId, displayName, tool }` |
+| `agent:move` | `{ agentId, displayName, from, to, path }` |
+| `agent:morale-changed` | `{ agentId, displayName, morale, delta, reason? }` |
+| `agent:chat` | `{ channel, senderId, senderDisplayName, targetId?, message\|content, priority? }` |
+| `task:created` | `{ taskId\|id, title, assigned_to_id?, assignedToDisplayName?, unassigned?, parentTaskId? }` |
+| `task:updated` | `{ taskId\|id, status?, deleted?, assigned_to_id? }` |
+| `task:interrupted` | `{ taskId, agentId, displayName, interruptedById, snapshotRecordId }` |
+| `task:resuming` | `{ taskId, agentId, displayName }` |
 | `task:completed` | `{ taskId, result }` |
 | `task:update` | `{ taskId, ... }` (external-agent callback) |
-| `conversation:created` | `{ conversationId, channel, type, participants }` |
-| `conversation:message` | `{ conversationId, message }` |
-| `conversation:speech` | `{ conversationId, speaker, content }` |
+| `conversation:created` | `{ conversationId, channel, type, participantIds }` |
+| `conversation:message` | `{ conversationId, message }` (the inner `message` carries `sender_id`/`sender_name`) |
+| `conversation:speech` | `{ conversationId, speakerId, speakerDisplayName, content }` |
 | `conversation:concluded` | `{ conversationId, summary, recordId? }` |
-| `meeting:started` | `{ meetingId, participants, topic? }` |
-| `meeting:speech` | `{ meetingId, speaker, content }` |
+| `meeting:started` | `{ meetingId, participantIds, topic? }` |
+| `meeting:speech` | `{ meetingId, speakerId, speakerDisplayName, content }` |
 | `meeting:concluded` | `{ meetingId, conclusion }` |
-| `bulletin:new` | `{ message }` |
-| `notification:new` | `{ agentName?, eventType?, content, priority? }` |
-| `approval:requested` | `{ approvalId, agent_id, agentName, tool_name, args, ctx?, expiresAt? }` |
-| `approval:agent_decided` | `{ approvalId, decision, decidedBy: 'agent', reason? }` |
-| `approval:resolved` | `{ approvalId, decision, decidedBy }` |
+| `bulletin:new` | `{ message }` (carries `sender_id` / `sender_name`) |
+| `notification:new` | `{ agentId?, displayName?, eventType?, content, priority? }` |
+| `approval:requested` | `{ approvalId, agentId, displayName, tool_name, args, ctx?, expiresAt? }` |
+| `approval:agent_decided` | `{ approvalId, decision, decidedById, decidedBy: 'agent', reason? }` |
+| `approval:resolved` | `{ approvalId, decision, decidedById, decidedBy }` |
 | `governance:new_event` | `{}` — front-end re-fetches governance feed |
-| `governance:${eventType}` | `{ id, sender, content, eventType, priority, timestamp }` — `eventType` is dynamic; values emitted today are `review`, `intervention`, `janitor`, `budget_alert`, and `tool_approval` |
-| `cron:updated` | `{ action, jobId, agentName?, timestamp? }` (action: `created`/`updated`/`deleted`/`approved`) |
+| `governance:${eventType}` | `{ id, senderId, senderDisplayName, content, eventType, priority, timestamp }` — `eventType` is dynamic; values emitted today are `review`, `intervention`, `janitor`, `budget_alert`, and `tool_approval` |
+| `cron:updated` | `{ action, jobId, assignedToId?, displayName?, timestamp? }` (action: `created`/`updated`/`deleted`/`approved`) |
 | `cron:executed` | `{ jobId, status, result?, error? }` |
 | `outer_chat:incoming` | `{ channel, message }` |
-| `outer_chat:auto_reply` | `{ channel, agent, reply }` |
-| `outer_chat:sent` | `{ channel, content, sender }` |
-| `stats:refresh` | `{ agentName?, totalTokens? }` |
+| `outer_chat:auto_reply` | `{ channel, agentId, displayName, reply }` |
+| `outer_chat:sent` | `{ channel, content, senderId, senderDisplayName }` |
+| `stats:refresh` | `{ agentId?, displayName?, totalTokens? }` |
 | `skills:updated` | `{ serverId }` |
 
 > `task:executing`, `task:failed`, `task:list-changed`, `message:dm`, `agent:server-move`, `agent:created/updated/deleted` do not exist as first-class SSE events — the front-end infers them from `task:updated` + `stats:refresh` and the stable event set above.

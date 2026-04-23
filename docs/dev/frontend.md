@@ -210,7 +210,7 @@ events are plain strings with an optional payload object.
 | `dashboard:open` | — | Open Dashboard panel |
 | `outerChannels:open` | — | Open OuterChannelsOverlay |
 | `board:open` | — | Open Kanban Board |
-| `memory:open` | `{ agentName }` | Open MemoryPanel for an agent |
+| `memory:open` | `{ agentId, displayName }` | Open MemoryPanel for an agent |
 | `editRoom:selected` | `{ room }` | Open RoomPropertiesPanel |
 | `editRoom:deselected` | — | Close RoomPropertiesPanel |
 | `editItem:selected` | `{ item }` | Highlight item in ItemShopPanel |
@@ -259,19 +259,19 @@ REST paths the component calls directly.
 |-----------|---------|-------------------|
 | `HUD.jsx` | Top bar: space name, settings button, edit mode toggle, user menu | `GET /api/settings` |
 | `StatsBar.jsx` | Always-visible bottom bar: token budget, morale, task counts | `GET /api/agents`, `GET /api/tasks` (re-fetched on `stats:refresh` SSE) |
-| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/agents`, `POST /api/agents/:name/rest`, `GET /api/messages/governance-events` (reads the `governance_events` table) |
+| `Dashboard.jsx` | Agent overview: status, morale, rest controls; governance review display | `GET /api/agents`, `POST /api/agents/:id/rest`, `GET /api/messages/governance-events` (reads the `governance_events` table) |
 | `AgentPanel.jsx` | Clicked-agent detail panel with tabs for chat, tasks, settings, memory | `GET /api/settings/debug` |
 | `AgentSettings.jsx` | Full per-agent configuration: models, tools, governance, avatar, persona | `GET /api/settings/avatars`, `GET /api/settings/providers`, `GET /api/tools` (compat) or `GET /api/skills/builtin-tools`, `GET /api/agents/governance/capabilities`, `GET /api/agents/governance/templates`, `GET /api/agents` |
 | `AgentTaskPanel.jsx` | In-panel task list and task creation for a specific agent | `GET /api/tasks`, `GET /api/projects`, `POST /api/tasks` |
 | `AgentSkillsPanel.jsx` | Per-agent skill assignment: toggle built-in tools and MCP skills | `GET /api/skills` |
-| `MemoryPanel.jsx` | Agent long-term memory viewer and editor (multiple memory types) | `GET/PUT /api/agents/:name/memory/:type`, `GET /api/agents/:name/memory-stats`, `POST /api/agents/:name/memory/consolidate` |
+| `MemoryPanel.jsx` | Agent long-term memory viewer and editor (multiple memory types) | `GET/PUT /api/agents/:id/memory/:type`, `GET /api/agents/:id/memory-stats`, `POST /api/agents/:id/memory/consolidate` |
 | `SpaceSettings.jsx` | Global settings: providers, office layout, theme, idle loop, governance, debug | `GET/PUT /api/settings`, `GET/POST /api/settings/providers`, `GET /api/settings/debug` |
 
 ### Communication
 
 | Component | Purpose | Key API Endpoints |
 |-----------|---------|-------------------|
-| `BossChatPanel.jsx` | Boss-only chat: filters to `boss` + `dm:Boss:*` channels, "New DM" dropdown with agent avatars, per-channel lazy loading (30/batch) | `GET /api/messages/all-chats?limit=50` (sidebar), `GET /api/messages?channel=...&limit=30` (per-channel), `GET /api/conversations/boss-unread` |
+| `BossChatPanel.jsx` | Boss-only chat: filters to `boss` + all `dm:*` channels that include the `boss` sentinel UUID, "New DM" dropdown with agent avatars, per-channel lazy loading (30/batch) | `GET /api/messages/all-chats?limit=50` (sidebar), `GET /api/messages?channel=...&limit=30` (per-channel), `GET /api/conversations/boss-unread` |
 | `ChatWindow.jsx` | Reusable single-thread chat UI inside `AgentPanel`, lazy loading (50/batch) | `GET /api/messages?channel=...&limit=50`, `POST /api/messages/chat` |
 | `ChatLog.jsx` | Full chat history viewer across all agents, unread indicators, per-channel lazy loading (30/batch) | `GET /api/messages/all-chats?limit=50` (sidebar), `GET /api/messages?channel=...&limit=30` (per-channel), `GET /api/conversations/boss-unread` |
 | `ChatOverlay.jsx` | Floating live feed of recent agent messages, lazy loading (30/batch) | `GET /api/messages/all-chats?limit=30&before=...` |
@@ -310,7 +310,7 @@ REST paths the component calls directly.
 | `ContainerPanel.jsx` | Docker container status viewer and basic controls | `GET /api/containers` |
 | `CronPanel.jsx` | Scheduled task manager: create cron jobs, view execution history | `GET /api/cron`, `GET /api/agents` |
 | `SkillLibrary.jsx` | Manage custom skills and MCP servers; configure tool permissions | `GET /api/skills`, `GET /api/skills/mcp-servers`, `GET /api/skills/builtin-tools`, `GET/PUT /api/settings/tool-permissions`, `POST /api/skills`, `POST /api/skills/mcp-servers` |
-| `PromptEditor.jsx` | Edit global system prompt templates and memory block templates | `GET/PUT /api/settings/scene-templates-default`, `GET /api/agents/Manager/scene-templates`, `GET /api/settings/memory-blocks-default`, `GET /api/settings/governance-blocks-default` |
+| `PromptEditor.jsx` | Edit global system prompt templates and memory block templates | `GET/PUT /api/settings/scene-templates-default`, `GET /api/agents/:id/scene-templates` (Manager UUID resolved via `GET /api/agents?name=Manager`), `GET /api/settings/memory-blocks-default`, `GET /api/settings/governance-blocks-default` |
 | `DebugLogPanel.jsx` | Live debug log viewer with clear capability (embedded in `SpaceSettings`) | `DELETE /api/settings/debug/logs` |
 
 ### Data / Debug Utilities
@@ -343,7 +343,7 @@ REST paths the component calls directly.
 | `OnboardingStepModels.jsx` | Select brain, cerebellum and context-engine providers / models | `GET /api/settings/providers` |
 | `OnboardingStepExternalConnection.jsx` | External-agent connection setup for externally-hosted agents | `GET /api/external-agents`, `POST /api/external-agents/test-config` |
 | `OnboardingStepLegacy.jsx` | Inherit a departed agent's legacy file | `GET /api/legacies` |
-| `OnboardingStepReview.jsx` | Final review + submit: creates the agent, assigns capabilities, writes settings | `GET /api/settings/providers`, `POST /api/agents`, `PUT /api/agents/:name/settings`, `PUT /api/agents/:id/capabilities` |
+| `OnboardingStepReview.jsx` | Final review + submit: creates the agent, assigns capabilities, writes settings | `GET /api/settings/providers`, `POST /api/agents`, `PUT /api/agents/:id/settings`, `PUT /api/agents/:id/capabilities` |
 
 ### Auth
 
@@ -369,6 +369,8 @@ evtSource.onmessage = (e) => {
 
 The connection is closed on component unmount. Browser `EventSource` handles
 automatic reconnect; no custom reconnection logic is needed.
+
+Every per-agent SSE payload carries `agentId` (UUID) plus a pre-joined `displayName`. Frontend components key their `useState` maps by `agentId` and render `displayName` directly — no client-side JOIN to the agent list is needed.
 
 **SSE event types handled:**
 

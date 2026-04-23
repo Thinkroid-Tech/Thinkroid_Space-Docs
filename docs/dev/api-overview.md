@@ -11,6 +11,8 @@ Endpoints protected with `requirePermission(perm)` additionally check that the a
 ## Common Patterns
 
 - **IDs**: UUID v4
+- **Agent identity**: every per-agent path uses the UUID (`/api/agents/:id/*`). `agents.name` is mutable display text and never appears as a path parameter. Look up by name via `GET /api/agents?name=<string>`.
+- **Sentinel agents**: the `system` (`00000000-0000-0000-0000-000000000001`) and `boss` (`00000000-0000-0000-0000-000000000002`) UUIDs are reserved non-human actors; per-agent endpoints return `404` for these UUIDs.
 - **Timestamps**: ISO 8601
 - **Error response**: `{ "error": "message" }`
 - **All request/response bodies**: JSON (`Content-Type: application/json`)

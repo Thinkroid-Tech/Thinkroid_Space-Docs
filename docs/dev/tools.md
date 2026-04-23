@@ -8,7 +8,7 @@ Thinkroid Space agents interact with the world through tools. All tools are auto
 
 | Tool | Description |
 |------|-------------|
-| `move_to` | Move to a location in the office. Destinations: `meeting_room`, `break_room`, `own_workspace`, `bulletin_board`, `dashboard_screen`, `agent:<AgentName>`, or `x,y` coordinates. Must move to a location before interacting with people or things there. |
+| `move_to` | Move to a location in the office. Destinations: `meeting_room`, `break_room`, `own_workspace`, `bulletin_board`, `dashboard_screen`, `agent:<AgentName>` (resolved server-side to the target's UUID), or `x,y` coordinates. Must move to a location before interacting with people or things there. |
 | `perceive_surroundings` | Look around to see current room, nearby colleagues, and nearby items. Use before deciding where to move or who to interact with. |
 
 ## Communication
@@ -117,7 +117,9 @@ export default {
 
   async executor(args, ctx) {
     // args = parsed parameters from the AI
-    // ctx = { agentName, agentId, spaceId, taskId }
+    // ctx = { agentId, spaceId, taskId, sessionId, mode }
+    //   — built by buildToolContext({ agentId, sessionId, mode }); identity is
+    //   the UUID. Display names are resolved lazily via the registry if needed.
     const { param1 } = args;
 
     // ... do work ...
@@ -149,7 +151,7 @@ When `checkPermission()` returns `always_confirm`, the tool dispatcher (`tools/i
 1. `findAgentWithCapability('tool_approval')` locates the designated approver agent. If none is found, execution falls back to the standard Boss-approval queue.
 2. The approver agent's `params` field on the `tool_approval` capability scopes which tools it covers. Tools outside that scope bypass agent approval and fall through to Boss approval normally.
 3. `tryAgentApproval()` sends the pending tool call to the approver agent as a task; the approver responds with `approve` or `reject`.
-4. The decision (and `decided_by` agent name) is written to the `tool_approvals` table before execution proceeds or the tool call is cancelled.
+4. The decision and the approver's UUID (`decided_by_id`) are written to the `tool_approvals` table before execution proceeds or the tool call is cancelled. When the human operator approves through the Boss queue, the `boss` sentinel UUID (`00000000-0000-0000-0000-000000000002`) is recorded.
 
 This allows governance agents (e.g. a security reviewer) to approve or reject sensitive tool calls autonomously without requiring the human Boss to act on every request.
 

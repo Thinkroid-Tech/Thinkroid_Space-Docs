@@ -6,6 +6,8 @@ The hook system is the primary extensibility surface of Thinkroid Space. It lets
 
 Every meaningful server-side action emits one or more named hook events. Examples include an agent being created, a task completing, an AI call returning, a governance review firing, or a message being sent to an external channel. Extensions subscribe to these events using a simple `register(hooks)` function and react to them with async handlers.
 
+> **Identity in hook payloads.** All agent-scoped hook payloads reference the target agent by `agentId` (the UUID from `agents.id`). Where a display name is useful (e.g. logging), a pre-joined `displayName` is provided alongside. Handlers should never assume `agentName` equality between events — names are mutable.
+
 ### HookManager architecture
 
 The `HookManager` (singleton exported as `hooks` from `hookManager.js`) maintains a `Map` of hook name to an ordered list of registered handlers. Each entry in the list carries the handler function, a numeric priority, and a human-readable label.
@@ -95,14 +97,14 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `agent:create:after` | No | `{ agent }` — the newly created agent row |
-| `agent:update:after` | No | `{ agent }` — updated agent row |
-| `agent:delete:before` | Yes | `{ agentId }` — id of agent about to be deleted |
+| `agent:create:after` | No | `{ agent }` — the newly created agent row (`agent.id` is the UUID) |
+| `agent:update:after` | No | `{ agent, changedFields }` — updated agent row; if `name` was renamed, `changedFields` includes `'name'` and the `agent.id` is unchanged |
+| `agent:delete:before` | Yes | `{ agentId }` — UUID of agent about to be deleted |
 | `agent:delete:after` | No | `{ agentId }` |
 | `agent:offboard:after` | No | `{ agent }` — agent that was offboarded |
 | `agent:learn:after` | No | `{ agentId, memory }` — extracted memory entry |
-| `agent:morale:changed` | No | `{ agentId, morale, delta }` |
-| `agent:status:changed` | No | `{ agentId, status }` — new status string |
+| `agent:morale:changed` | No | `{ agentId, displayName, morale, delta }` |
+| `agent:status:changed` | No | `{ agentId, displayName, status }` — new status string |
 
 ### Task
 
@@ -119,45 +121,45 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `ai:call:before` | Yes | `{ scope, agentName, messages }` — `scope` is `brain`, `cerebellum`, or `context_engine` |
-| `ai:call:after` | No | `{ scope, agentName, response, tokensUsed }` |
+| `ai:call:before` | Yes | `{ scope, agentId, displayName, messages }` — `scope` is `brain`, `cerebellum`, or `context_engine` |
+| `ai:call:after` | No | `{ scope, agentId, displayName, response, tokensUsed }` |
 
 ### AI — Tool Loop
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `ai:toolloop:start` | No | `{ agentName, taskId }` |
-| `ai:toolloop:end` | No | `{ agentName, taskId, rounds, result }` |
-| `ai:round:before` | Yes | `{ agentName, round, messages }` |
-| `ai:round:after` | No | `{ agentName, round, response }` |
+| `ai:toolloop:start` | No | `{ agentId, displayName, taskId }` |
+| `ai:toolloop:end` | No | `{ agentId, displayName, taskId, rounds, result }` |
+| `ai:round:before` | Yes | `{ agentId, displayName, round, messages }` |
+| `ai:round:after` | No | `{ agentId, displayName, round, response }` |
 
 ### AI — Tool Execution
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `ai:tool:before` | Yes | `{ agentName, toolName, args }` |
-| `ai:tool:after` | No | `{ agentName, toolName, args, result }` |
-| `ai:tool:denied` | No | `{ agentName, toolName, reason }` |
-| `ai:tool:approval` | No | `{ agentName, toolName, approvalId, status }` |
+| `ai:tool:before` | Yes | `{ agentId, displayName, toolName, args }` |
+| `ai:tool:after` | No | `{ agentId, displayName, toolName, args, result }` |
+| `ai:tool:denied` | No | `{ agentId, displayName, toolName, reason }` |
+| `ai:tool:approval` | No | `{ agentId, displayName, toolName, approvalId, status }` |
 
 ### AI — System Events
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `ai:token:recorded` | No | `{ agentName, tokens, model }` |
-| `ai:context:trimmed` | No | `{ agentName, before, after }` — message counts |
-| `ai:retry` | No | `{ agentName, attempt, error }` |
-| `ai:rounds:exceeded` | No | `{ agentName, maxRounds }` |
-| `ai:interrupt` | No | `{ agentName, reason }` |
+| `ai:token:recorded` | No | `{ agentId, displayName, tokens, model }` |
+| `ai:context:trimmed` | No | `{ agentId, displayName, before, after }` — message counts |
+| `ai:retry` | No | `{ agentId, displayName, attempt, error }` |
+| `ai:rounds:exceeded` | No | `{ agentId, displayName, maxRounds }` |
+| `ai:interrupt` | No | `{ agentId, displayName, reason }` |
 
 ### Governance
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `governance:review:after` | No | `{ taskId, taskTitle, reviewer, report, timestamp }` |
-| `governance:intervention:after` | No | `{ taskId, taskTitle, agentName, reason, minutesElapsed, interventionAgent, report, timestamp }` |
+| `governance:review:after` | No | `{ taskId, taskTitle, reviewerId, reviewerDisplayName, report, timestamp }` |
+| `governance:intervention:after` | No | `{ taskId, taskTitle, agentId, displayName, reason, minutesElapsed, interventionAgentId, report, timestamp }` |
 | `governance:janitor:after` | No | `{ cleaned }` — summary of janitor cleanup pass |
-| `governance:budget:alert` | No | `{ agentName, tokens, threshold }` |
+| `governance:budget:alert` | No | `{ agentId, displayName, tokens, threshold }` |
 
 ### Memory
 
@@ -178,14 +180,14 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
 | `meeting:start:after` | No | `{ meeting }` |
-| `meeting:speech:after` | No | `{ meetingId, agentName, content }` |
+| `meeting:speech:after` | No | `{ meetingId, speakerId, speakerDisplayName, content }` |
 | `meeting:conclude:after` | No | `{ meetingId, minutes }` |
 
 ### Approval
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `approval:decide:after` | No | `{ approvalId, toolName, agentName, decision, decidedBy }` |
+| `approval:decide:after` | No | `{ approvalId, toolName, agentId, displayName, decision, decidedById, decidedBy }` — `decidedBy` is `'agent'` or `'boss'`; `decidedById` is always a UUID (Boss decisions use the `boss` sentinel) |
 
 ### Skill & MCP
 
@@ -236,8 +238,8 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
-| `message:chat:before` | Yes | `{ channel, sender, content }` |
-| `message:chat:after` | No | `{ channel, sender, content, messageId }` |
+| `message:chat:before` | Yes | `{ channel, senderId, senderDisplayName, content }` |
+| `message:chat:after` | No | `{ channel, senderId, senderDisplayName, content, messageId }` |
 | `message:send:after` | No | `{ channel, messageId }` |
 
 ### Athena
@@ -260,7 +262,7 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 |-----------|-----------|------------|
 | `channel:create:after` | No | `{ channel }` |
 | `channel:delete:after` | No | `{ channelId }` |
-| `channel:incoming:after` | No | `{ channelId, platform, sender, content }` |
+| `channel:incoming:after` | No | `{ channelId, platform, senderExternalId, senderDisplayName, content }` |
 | `channel:reply:after` | No | `{ channelId, content }` |
 
 ### Container
@@ -340,7 +342,7 @@ export async function register(hooks) {
       event: 'complete',
       taskId: task.id,
       title: task.title,
-      assignedTo: task.assigned_to,
+      assignedToId: task.assigned_to_id,
       ts: new Date().toISOString()
     });
   }, { priority: 200, label: 'task-audit:complete' });
@@ -365,14 +367,14 @@ This extension prevents agents from running the `shell_exec` tool outside busine
 // src/extensions/business-hours-guard.js
 
 export async function register(hooks) {
-  hooks.on('ai:tool:before', async ({ agentName, toolName }) => {
+  hooks.on('ai:tool:before', async ({ agentId, displayName, toolName }) => {
     if (toolName !== 'shell_exec') return;
 
     const hour = new Date().getHours();
     if (hour < 9 || hour >= 18) {
       return {
         cancel: true,
-        reason: `shell_exec is restricted outside business hours (agent: ${agentName})`
+        reason: `shell_exec is restricted outside business hours (agent: ${displayName} [${agentId}])`
       };
     }
   }, { priority: 5, label: 'business-hours-guard' });
@@ -449,12 +451,12 @@ Governance action → persistGovernanceOutput()
 
 | Surface | Data Source | Purpose |
 |---------|-------------|---------|
-| Boss Chat (Manager) | `messages channel='boss'` + `dm:Boss:*` | Boss ↔ Agent conversations (manager channel + DMs) |
+| Boss Chat (Manager) | `messages channel='boss'` + `dm:<boss-uuid>:<agent-uuid>` | Boss ↔ Agent conversations (manager channel + DMs; DM channel keys are UUID-pair lexicographically sorted) |
 | Message Center | `boss_notifications` | Filtered governance notifications (see MessageCenter section below) |
 | Dashboard → Governance | `governance_events` table (served by `GET /api/messages/governance-events`) | Full governance audit log (DB-backed, persistent) |
 | Chat Log | `messages` (dm:, bulletin, meeting:) | Agent-to-agent chat |
 
-Note: Agent Settings chat and Boss Chat share the same DM channel (`dm:Boss:AgentName`), so conversations are unified across both views.
+Note: Agent Settings chat and Boss Chat share the same DM channel (`dm:<boss-uuid>:<agent-uuid>`, UUIDs lexicographically sorted), so conversations are unified across both views and stay stable when agents are renamed.
 
 **notification_reader capability:**
 

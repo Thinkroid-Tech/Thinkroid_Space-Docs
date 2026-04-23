@@ -1,5 +1,27 @@
 # System Overview
 
+## Agent Identity Model
+
+Thinkroid Space uses `agents.id` (UUID v4) as the single system-wide identity key. `agents.name` is mutable display text only. All cross-table foreign keys, SSE event payloads, REST path parameters, filesystem directories, Docker network names, and DM channel keys resolve to the UUID.
+
+- **`agents.kind`** — `'human'` | `'system'` | `'boss'`. The `human_agents` view filters non-human actors out of roster lookups.
+- **Sentinel rows** — two non-human actors are seeded at DB init so FK references to "system" or "the operator" always resolve:
+
+  | Name | UUID | Kind |
+  |------|------|------|
+  | `system` | `00000000-0000-0000-0000-000000000001` | `system` |
+  | `boss`   | `00000000-0000-0000-0000-000000000002` | `boss` |
+
+  Sentinel UUIDs appear in `messages.sender_id`, `governance_events.sender_id`, `tool_approvals.decided_by_id` (when Boss approves), etc. `GET /api/agents/<sentinel-uuid>/settings` returns 404.
+- **REST paths** — every per-agent route uses `:id` (UUID). Name lookup is a query param: `GET /api/agents?name=<string>`.
+- **SSE payloads** — events carry `agentId` (UUID) + `displayName` (pre-joined). Consumers never JOIN client-side.
+- **DM channels** — `dm:<uuid_low>:<uuid_high>` (lexicographic UUID ordering). Stable across renames.
+- **Filesystem** — `office/agents/<uuid>/`, `office/legacies/<uuid>/`, `workspace/agents/<uuid>/`.
+- **Containers** — network `ts-net-<uuid>`, workspace dir `/agents/<uuid>/`, label `ts.agent.id=<uuid>` (identity) + `ts.agent.name=<current-name>` (refreshable debug metadata).
+- **Renaming** — `PUT /api/agents/:id` with `{ name: newName }` rewrites a single DB column. No FK data moves, no files are renamed, no DM channels are migrated.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -257,12 +279,12 @@ Discord and Telegram integrations can also be fully managed through the **Extern
 - **AI calls** are centralized in `services/ai.js`. All AI interactions go through this single module, which handles provider resolution, model selection, token tracking, and automatic backup model fallback. When the primary model fails after 3 retries (rate limit, 5xx, timeout), the module transparently retries with the configured backup model. Backup config is resolved in priority order: agent-level backup → global default backup → error. The `ai:backup:activated` hook event fires on fallback. All six call variants support this mechanism; the `*WithTools` variants accept a `backupConfigOverride` parameter for callers that manage their own config (e.g. Athena).
 - **Task execution** is centralized in `taskExecutor.js`. `executeTask(taskId)` is the single entry point for running a task. Internal services (idleLoop, cronScheduler, delegate-task) call it directly — no internal HTTP `fetch()` calls and no auth bypass. `routes/tasks.js` is a thin HTTP wrapper around the same function. `createTaskInternal()` in the same module handles programmatic task creation with immediate execution.
 - **Tool system** uses auto-discovery: any `.js` file in `services/tools/` that exports `{ defaultPermission, definition, executor }` is automatically registered at startup.
-- **Tool permissions** have four levels: `auto` (execute immediately), `confirm` (Boss approval queue), `always_confirm` (per-agent hook via `tool_approval` capability — triggers `tryAgentApproval()` before execution), and `deny` (blocked). `checkPermission()` returns `always_confirm` as a distinct value; the tool dispatcher routes it through the designated approval agent found via `findAgentWithCapability('tool_approval')`.
+- **Tool permissions** have four levels: `auto` (execute immediately), `confirm` (Boss approval queue), `always_confirm` (per-agent hook via `tool_approval` capability — triggers `tryAgentApproval()` before execution), and `deny` (blocked). `checkPermission()` returns `always_confirm` as a distinct value; the tool dispatcher routes it through the designated approval agent found via `findAgentWithCapability('tool_approval')`, which returns a UUID. The `tool_approvals.decided_by_id` column records the UUID of whichever agent (or the `boss` sentinel) resolved the request.
 - **Agent Templates** (`AGENT_TEMPLATES` in `governanceEngine.js`) define 11 pre-built role configurations (Manager, Accountant, InternalAuditor, Sentinel, Evaluator, ToolUseManager, NotificationReader, and others); the hire wizard adds a Custom entry for a total of 12 creation options. Calling `applyTemplate(agentId, templateId)` atomically sets the agent's persona, specialty, governance capabilities, and org role.
 - **Governance capabilities** number 22 across 6 categories: `management` (6), `finance` (3), `quality` (1), `monitoring` (9), `evaluation` (2), `approval` (1). `kind` is one of `permission`, `hook`, or `skill`. The `tool_approval` capability (kind: `hook`, category: `approval`) designates an agent as the tool-use approver; its `params` field scopes which tools it covers. The `notification_reader` capability (kind: `hook`, category: `management`) designates an agent to filter governance notifications before they reach Boss. Agent color in the UI (`governance_color`) is computed server-side from the agent's highest-priority active capability category.
 - **Governance event persistence** — `governanceRouter.js` centralizes all governance output. Every new governance event (janitor, review, intervention, budget alert, tool approval) is written to the dedicated `governance_events` table (decoupled from the `messages` table so general chat and audit trails don't collide). The Dashboard Governance tab reads it back via `GET /api/messages/governance-events`. On SSE, the server emits both a dynamic `governance:${eventType}` event per action and a lightweight `governance:new_event` ping from tool-approval paths (both real and complementary). The Message Center shows only notifications approved by the `notification_reader` agent (or auto-notify fallback for intervention/budget_alert). **Legacy audit caveat:** pre-migration `[Auto Review]` / `[Intervention]` rows migrated inside the `messages` table to `channel='governance'` are not visible through `/api/messages/governance-events`; until those rows are backfilled into `governance_events`, inspecting them requires querying `messages` directly with `channel='governance'`.
 - **No seed agents** — `db.js` no longer inserts default agents at startup. Agents are created by the user or via the Hire panel.
 - **Capability-based lookups** — internal services use `findAgentWithCapability(capabilityId)` to locate the right specialist agent rather than hard-coded role name fallbacks.
-- **Memory files** are stored on disk as plain Markdown under `office/agents/<name>/` (`persona.md`, `short_memory.md`, `long_memory.md`), managed by `src/office.js`. They are kept out of SQLite so they can be easily inspected and version-controlled. Offboarding bundles these files into `office/legacies/<name>/`.
+- **Memory files** are stored on disk as plain Markdown under `office/agents/<uuid>/` (`persona.md`, `short_memory.md`, `long_memory.md`), managed by `src/office.js`. Directories are keyed on the agent's UUID (`agents.id`), so renaming an agent never moves a file. They are kept out of SQLite so they can be easily inspected and version-controlled. Offboarding bundles these files into `office/legacies/<uuid>/`.
 - **SSE** is used for real-time updates (task execution, token stats, agent movement) instead of WebSockets, keeping the server stateless-friendly.
 - **External notifications** are proxied through the backend (`/api/notifications/external`) to avoid CORS issues. The server caches the response for 24 hours. The frontend filters by install date, dismissed state, and user preferences.

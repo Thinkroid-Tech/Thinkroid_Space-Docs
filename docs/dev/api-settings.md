@@ -34,7 +34,7 @@ Each AI model type (Brain, Cerebellum, Context Engine, Athena) supports a backup
 
 **Priority chain**: Agent-level backup → Global default backup → Error
 
-**Backup fields in agent settings** (`GET /PUT /api/agents/:name/settings`):
+**Backup fields in agent settings** (`GET /PUT /api/agents/:id/settings`):
 
 | Field | Description |
 |-------|-------------|
@@ -96,8 +96,8 @@ Body: `{ enabled: boolean }`
 Returns `{ enabled: boolean }`. Requires `admin` role.
 
 ### `GET /api/settings/debug/logs`
-Get paginated debug logs. Query: `?page=1&limit=20&agent_name=`
-Returns `{ logs, pagination }`.
+Get paginated debug logs. Query: `?page=1&limit=20&agent_id=<uuid>`
+Returns `{ logs, pagination }`. Each log row carries `agent_id` (UUID FK) and `agent_name` (pre-joined display).
 
 ### `DELETE /api/settings/debug/logs`
 Clear all debug logs.
@@ -313,7 +313,7 @@ Returns `CronJob` with `executions: CronExecution[]`.
 
 ### `POST /api/cron`
 Create a new cron job.
-Body: `{ name, cron_expression, type?, description?, task_title?, task_description?, assigned_to?, script?, execution_env?, require_approval_each_run? }`
+Body: `{ name, cron_expression, type?, description?, task_title?, task_description?, assigned_to_id?, script?, execution_env?, require_approval_each_run? }` — `assigned_to_id` is an agent UUID FK.
 Returns `CronJob` (201). Requires `manage_cron`.
 
 ### `PUT /api/cron/:id`

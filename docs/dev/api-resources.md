@@ -317,8 +317,8 @@ Returns `204 No Content`.
 
 ### `GET /api/records`
 List records with optional filtering and search.
-Query: `?type=note|meeting_conclusion|task_snapshot&created_by=<agentName>&q=<search>&limit=50`
-Returns `Record[]`.
+Query: `?type=note|meeting_conclusion|task_snapshot&created_by_id=<uuid>&q=<search>&limit=50`
+Returns `Record[]`. Each record carries `created_by_id` (UUID) and `created_by_name` (pre-joined display).
 
 ### `GET /api/records/:id`
 Get a record by ID.
@@ -326,7 +326,7 @@ Returns `Record`.
 
 ### `POST /api/records`
 Create a record.
-Body: `{ name, content, type?, created_by?, links?, access? }`
+Body: `{ name, content, type?, created_by_id?, links?, access? }` — `created_by_id` is an agent UUID.
 Returns `Record` (201). Requires `manage_records`.
 
 ### `PUT /api/records/:id`
@@ -399,13 +399,13 @@ Query: `?fromX=&fromY=&toX=&toY=&agentId=<uuid>` — Returns `{ path: { x, y }[]
 ## Legacies
 
 ### `GET /api/legacies`
-List all legacy files from departed agents.
+List all legacy archives from departed agents. Legacies live under `office/legacies/<uuid>/` — each entry carries the original agent's UUID plus the archived display name.
 Returns legacy summary array.
 
-### `GET /api/legacies/:name`
-Read a legacy file's full content.
+### `GET /api/legacies/:legacyId`
+Read a legacy archive's full content. `:legacyId` is the original agent UUID used to name the legacy directory.
 Returns legacy object.
 
-### `DELETE /api/legacies/:name`
-Permanently delete a legacy file directory.
+### `DELETE /api/legacies/:legacyId`
+Permanently delete a legacy archive directory.
 Returns `{ success: true }`. Requires `manage_agents`.
