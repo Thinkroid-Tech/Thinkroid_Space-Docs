@@ -25,4 +25,4 @@ Endpoints protected with `requirePermission(perm)` additionally check that the a
 - [API: Agents & Tasks](api-agents.md) — Agent management, memory, governance, tasks
 - [API: Settings & Configuration](api-settings.md) — Global settings, providers, Athena, skills, cron
 - [API: Communication & Content](api-communication.md) — Messages, conversations, outer channels, meetings, notifications, SSE events
-- [API: Resources & Admin](api-resources.md) — Containers, files, rooms, items, departments, organizations, users, auth, approvals, projects, records, rules, spaces, legacies
+- [API: Resources & Admin](api-resources.md) — Containers, files, rooms, items, departments, organizations, users, auth, approvals, projects, records, rules, spaces, legacies, metrics

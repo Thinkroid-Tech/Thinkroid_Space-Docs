@@ -4,6 +4,8 @@
 
 Manage Docker containers with the `ts.managed=true` label.
 
+> **Naming convention.** Container names have the form `ts_<uuid>_<scope>_<shortId>` where `scope` is one of `sandbox` / `deploy` / `service`. Networks are `ts-net-<uuid>`. Volumes are `ts-vol-<uuid>_<type>`. No display name appears in any Docker object. Identity is carried on the `ts.agent.id` label (immutable UUID); `ts.agent.name` is a refreshable debug-only metadata label that is rewritten whenever the agent is renamed, without rebuilding the container. Debug with `docker ps --format '{{.Names}} {{.Label "ts.agent.name"}}'`.
+
 ### `GET /api/containers`
 List all managed Docker containers. Returns `503` if Docker is unavailable.
 Returns `{ name, image, status, state, agent, type, ports, created }[]`.
@@ -409,3 +411,46 @@ Returns legacy object.
 ### `DELETE /api/legacies/:legacyId`
 Permanently delete a legacy archive directory.
 Returns `{ success: true }`. Requires `manage_agents`.
+
+---
+
+## Metrics
+
+A single admin-only endpoint returns a runtime snapshot of the backend's internal counters. Designed to be polled by an operator dashboard or scraped by an external monitoring agent; not exposed over SSE.
+
+### `GET /api/metrics`
+Return a JSON snapshot of runtime metrics. Requires `admin`.
+
+Response shape:
+
+```json
+{
+  "brain_pipeline": {
+    "calls_total": 12034,
+    "calls_error_total": 37,
+    "tool_rounds_total": 28891,
+    "retries_total": 412,
+    "tokens_total": 9238471,
+    "backoff": { "active": false, "next_retry_at": null }
+  },
+  "legacy_schema_warnings": 0,
+  "records_orphan_count": 0,
+  "container_rename_label_failed_total": 0,
+  "snapshot_at": "2026-04-23T10:15:03.214Z"
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `brain_pipeline.calls_total` | Total AI calls observed across `brain` / `cerebellum` / `context_engine` scopes since server boot. |
+| `brain_pipeline.calls_error_total` | Terminal failures (primary and backup models both exhausted). |
+| `brain_pipeline.tool_rounds_total` | Tool-loop rounds observed across all agents. |
+| `brain_pipeline.retries_total` | Individual retry attempts (not terminal failures). |
+| `brain_pipeline.tokens_total` | Sum of tokens reported by `ai:token:recorded`. |
+| `brain_pipeline.backoff` | Live state of the adaptive provider-rate-limit backoff. |
+| `legacy_schema_warnings` | Count of legacy-schema conditions detected at startup (missing FK columns, etc.) — should be `0` on a clean deploy. |
+| `records_orphan_count` | Rows in `office/records.db` whose `agent_id` is no longer present in `agents.id` at the last weekly sweep. |
+| `container_rename_label_failed_total` | Agent renames where updating the Docker `ts.agent.name` label failed. The rename still succeeded at the database level — this counter tracks the best-effort label sync. |
+| `snapshot_at` | Timestamp of snapshot generation. |
+
+Metrics collection can be disabled by setting the `ENABLE_METRICS_COLLECTION` environment variable to `false` (default is on). When disabled, the endpoint continues to respond but `brain_pipeline.*` counters are reported as zero.

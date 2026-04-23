@@ -37,7 +37,16 @@ Get a single agent by UUID.
 Returns `Agent`.
 
 ### `PUT /api/agents/:id`
-Update agent fields. Masked API keys are ignored. Passing `{ name: newName }` rewrites only the single `agents.name` column — all FK references, filesystem paths, DM channels, Docker resources, and SSE routing continue to resolve against the unchanged UUID.
+Update agent fields. Masked API keys are ignored.
+
+Passing `{ name: newName }` rewrites the single `agents.name` column and triggers three bounded sync writes before the response is returned:
+
+1. The `ts.agent.name` label is refreshed on every Docker container owned by the agent. Containers are **not** rebuilt, and no docker object name changes. Label-refresh failures are best-effort: they are logged and increment a metric, but do not roll back the rename.
+2. `workspace/agents/<uuid>/.alias` is rewritten to contain the new display name.
+3. The `agent:renamed` hook fires once with `{ agentId, oldName, newName }`. Extensions and the SSE bridge use this event to invalidate cached display strings.
+
+All FK references, filesystem directories, DM channel keys, Docker network and volume names, and SSE routing continue to resolve against the unchanged UUID.
+
 Body: any subset of `{ name, role, avatar, specialty, model_brain, brain_provider_id, brain_max_tokens, model_cerebellum, cerebellum_provider_id, cerebellum_max_tokens, model_context_engine, context_engine_provider_id, context_engine_max_tokens, status, shadow_mode, morale }`
 Returns `Agent`. Requires `manage_agents`.
 

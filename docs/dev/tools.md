@@ -56,11 +56,13 @@ All file tools support workspace routing with prefixes:
 
 Agents can run code and deploy services in sandboxed Docker containers. Workspace files are mounted at `/workspace` inside containers.
 
+All six container tools accept an `agent_id` parameter (UUID). When an agent calls a container tool, `agent_id` defaults to the caller's own UUID pulled from the execution context, so agents do not usually need to supply it explicitly. Docker objects themselves carry no display name — containers are named `ts_<uuid>_<scope>_<shortId>` (scope ∈ `sandbox` / `deploy` / `service`), networks are `ts-net-<uuid>`, and volumes are `ts-vol-<uuid>_<type>`. A `ts.agent.name` Docker label is maintained for debugging only and is refreshed on rename without rebuilding the container.
+
 | Tool | Description |
 |------|-------------|
 | `container_run` | Run a command in a temporary Docker container and return output. Container is automatically removed after execution. Example: `container_run({ image: "python:3.12-slim", command: "python /workspace/script.py" })` |
 | `container_deploy` | Deploy a long-running service container (web server, database). Returns container name and mapped ports. |
-| `container_list` | List all Docker containers belonging to the agent. Shows name, image, status, ports, and type (sandbox/service). |
+| `container_list` | List Docker containers belonging to an agent. Parameter `agent_id` (UUID) selects the target; legacy callers that still pass `agent` as a display name are resolved via a compatibility lookup on `agents.name` and logged as deprecated. Response shows name, image, status, ports, and type (sandbox/service). |
 | `container_logs` | Fetch recent stdout/stderr from a container. |
 | `container_stop` | Stop a running container. |
 | `container_remove` | Remove a container. Should be stopped first unless `force=true`. |

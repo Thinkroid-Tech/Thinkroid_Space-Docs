@@ -99,6 +99,7 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 |-----------|-----------|------------|
 | `agent:create:after` | No | `{ agent }` — the newly created agent row (`agent.id` is the UUID) |
 | `agent:update:after` | No | `{ agent, changedFields }` — updated agent row; if `name` was renamed, `changedFields` includes `'name'` and the `agent.id` is unchanged |
+| `agent:renamed` | No | `{ agentId, oldName, newName }` — fires once per rename, after `PUT /api/agents/:id` with `{ name }` has committed the DB column update. Paired with two best-effort sync writes (Docker `ts.agent.name` label refresh + `workspace/agents/<uuid>/.alias` rewrite). Extensions should treat this as the canonical signal to invalidate any cached display strings keyed by `agentId`. |
 | `agent:delete:before` | Yes | `{ agentId }` — UUID of agent about to be deleted |
 | `agent:delete:after` | No | `{ agentId }` |
 | `agent:offboard:after` | No | `{ agent }` — agent that was offboarded |
@@ -122,7 +123,8 @@ Hook names follow a consistent `noun:verb:timing` convention. `:before` hooks ar
 | Hook Name | Waterfall? | Data Shape |
 |-----------|-----------|------------|
 | `ai:call:before` | Yes | `{ scope, agentId, displayName, messages }` — `scope` is `brain`, `cerebellum`, or `context_engine` |
-| `ai:call:after` | No | `{ scope, agentId, displayName, response, tokensUsed }` |
+| `ai:call:after` | No | `{ scope, agentId, displayName, response, tokensUsed }` — success path |
+| `ai:call:error` | No | `{ scope, agentId, displayName, error: { message, code?, httpStatus? }, attempts, usedBackup, durationMs }` — terminal failure path, fires only once per call after retries and the configured backup model are both exhausted. Mutually exclusive with `ai:call:after`. `ai:retry` continues to fire for every individual retry; `ai:backup:activated` fires when the primary is exhausted and the backup model takes over. |
 
 ### AI — Tool Loop
 

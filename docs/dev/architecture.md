@@ -2,7 +2,7 @@
 
 ## Agent Identity Model
 
-Thinkroid Space uses `agents.id` (UUID v4) as the single system-wide identity key. `agents.name` is mutable display text only. All cross-table foreign keys, SSE event payloads, REST path parameters, filesystem directories, Docker network names, and DM channel keys resolve to the UUID.
+Thinkroid Space uses `agents.id` (UUID v4) as the single system-wide identity key. `agents.name` is mutable display text only. Every identity surface — cross-table FKs, SSE payloads, REST paths, filesystem directories, Docker networks/volumes/container names, Docker labels, DM channels, AI-config lookup (brain / cerebellum / context engine), tool-registry keys, capability checks, interrupt-manager state, cerebellum dispatch, and scene-template DI — resolves through the UUID. `agents.name` never participates in routing.
 
 - **`agents.kind`** — `'human'` | `'system'` | `'boss'`. The `human_agents` view filters non-human actors out of roster lookups.
 - **Sentinel rows** — two non-human actors are seeded at DB init so FK references to "system" or "the operator" always resolve:
@@ -16,9 +16,17 @@ Thinkroid Space uses `agents.id` (UUID v4) as the single system-wide identity ke
 - **REST paths** — every per-agent route uses `:id` (UUID). Name lookup is a query param: `GET /api/agents?name=<string>`.
 - **SSE payloads** — events carry `agentId` (UUID) + `displayName` (pre-joined). Consumers never JOIN client-side.
 - **DM channels** — `dm:<uuid_low>:<uuid_high>` (lexicographic UUID ordering). Stable across renames.
-- **Filesystem** — `office/agents/<uuid>/`, `office/legacies/<uuid>/`, `workspace/agents/<uuid>/`.
-- **Containers** — network `ts-net-<uuid>`, workspace dir `/agents/<uuid>/`, label `ts.agent.id=<uuid>` (identity) + `ts.agent.name=<current-name>` (refreshable debug metadata).
-- **Renaming** — `PUT /api/agents/:id` with `{ name: newName }` rewrites a single DB column. No FK data moves, no files are renamed, no DM channels are migrated.
+- **Filesystem** — `office/agents/<uuid>/`, `office/legacies/<uuid>/`, `workspace/agents/<uuid>/`. Each workspace dir carries a mandatory `.alias` file with the current display name; it is written on create and rewritten on rename, giving a one-line human-readable annotation for debug (`cat workspace/agents/<uuid>/.alias`).
+- **Containers** — dedicated Docker network `ts-net-<uuid>`, volumes `ts-vol-<uuid>_<type>`, container names `ts_<uuid>_<scope>_<shortId>` where `scope` ∈ `sandbox` / `deploy` / `service`. No docker object contains a display name. Labels: `ts.agent.id=<uuid>` is the identity primary key (used for every lookup); `ts.agent.name=<current-name>` is a refreshable debug metadata label. Debug workflow: `docker ps --format '{{.Names}} {{.Label "ts.agent.name"}}'` or `docker inspect <name> | grep ts.agent.name`.
+- **Renaming** — `PUT /api/agents/:id` with `{ name: newName }` rewrites the single `agents.name` column and triggers three bounded sync writes: (1) the `ts.agent.name` Docker label is refreshed on every container owned by the agent (best-effort; failures increment a metric exposed via `/api/metrics` and do not roll back the rename), (2) `workspace/agents/<uuid>/.alias` is rewritten, (3) the `agent:renamed` hook fires with `{ agentId, oldName, newName }`. No FK data moves, no filesystem directories are renamed, no DM channels migrate, no containers are rebuilt.
+
+### Record store (isolated SQLite file)
+
+Agent-generated records — notes, meeting conclusions, task snapshots — live in an isolated `office/records.db` (separate from the main Space DB). Because SQL foreign keys cannot cross database files, referential integrity for `records.agent_id` is enforced through three application-layer gates:
+
+1. **Write validation** — every `POST /api/records` and every `write_record` tool invocation runs `assertExistingAgentUuid(mainDb, agentId)` before the insert. Invalid UUID format or a UUID not present in `agents.id` returns `400` and nothing is written.
+2. **Delete hook** — `DELETE /api/agents/:id` calls `recordStore.deleteByAgent(agentId)` inside the same request flow (best-effort; a failure is logged as a warning and does not roll back the agent delete).
+3. **Weekly orphan sweep** — a system cron `orphan_records_cleanup` runs every Monday at 03:00, deletes any `records` row whose `agent_id` is no longer in `agents.id`, and publishes `records_orphan_count` to the `/api/metrics` snapshot so orphan accumulation is observable.
 
 ---
 

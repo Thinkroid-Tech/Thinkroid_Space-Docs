@@ -95,7 +95,7 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
 | `agents` | Every actor in the system, identified by UUID `id`. `kind` is one of `human`/`system`/`boss`; two sentinel rows (`system`, `boss`) are seeded at init. No default *human* agents are seeded — human employees are created by the user or by applying an Agent Template. | Links to `providers` for Brain/Cerebellum/Context Engine; human agents belong to orgs and departments via membership tables |
-| `tasks` | Work unit lifecycle tracking from pending through completion or failure; supports subtask hierarchy | `assigned_to_id` FK to `agents.id`; belongs to `projects`; self-referential parent/child via `parent_task_id` |
+| `tasks` | Work unit lifecycle tracking from pending through completion or failure; supports subtask hierarchy | `assigned_to_id` and `delegated_by_id` are UUID FKs to `agents.id` (both `ON DELETE SET NULL`); belongs to `projects`; self-referential parent/child via `parent_task_id` |
 | `projects` | Groups tasks under an organizational or agent owner | Owned by either an `organization` or an `agent` (UUID FK); contains many `tasks` |
 
 ---
@@ -108,7 +108,7 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 | `conversations` | One record per channel, tracking type, participants, round count, and status. `participants` is a JSON column holding an array of agent UUIDs. | `created_by_id` FK to `agents.id`; optionally linked to a `room` and a `record` (meeting conclusion) |
 | `read_cursors` | Tracks each agent's read position within a conversation for unread-message detection | Composite primary key `(agent_id, conversation_id)`; `agent_id` FK to `agents.id`; references `messages` |
 | `user_read_marks` | Records which messages have been read by the human user (Boss) | References `messages` |
-| `records` | Knowledge artifacts produced by agents: meeting conclusions, notes, reports | `created_by_id` FK to `agents.id`; linked to conversations via `conversations.record_id` |
+| `records` | Knowledge artifacts produced by agents: meeting conclusions, notes, reports. **Lives in an isolated SQLite file** `office/records.db`, not in the main Space DB — see the "Record store isolation" note below for the integrity model. | `agent_id` is a UUID matching `agents.id` (validated at the write layer rather than enforced by SQL FK, because SQL FKs cannot cross database files); linked to conversations via `conversations.record_id` |
 | `boss_notifications` | Pending notifications surfaced to the human operator in the message center | `agent_id` FK to `agents.id`; references `messages`. The redundant `agent_name` column has been retired. |
 
 ---
@@ -118,7 +118,7 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
 | `spaces` | Top-level office map; a single default space is created at startup | Parent of `rooms` and `placed_items` |
-| `rooms` | Named areas within a space: workspaces, meeting rooms, break rooms | Belongs to `spaces`; optionally owned by an `agent` |
+| `rooms` | Named areas within a space: workspaces, meeting rooms, break rooms | Belongs to `spaces`; `owner_agent_id` is a UUID FK to `agents.id` with `ON DELETE SET NULL` (firing the owner detaches the room instead of deleting it) |
 | `item_registry` | Catalog of all placeable item types with visual and interaction parameters | Referenced by `placed_items` |
 | `placed_items` | Instances of items actually placed in the office | Belongs to `spaces`; optionally scoped to a `room`; typed via `item_registry` |
 
@@ -140,7 +140,7 @@ Schema changes are applied additively via `ALTER TABLE` wrapped in `try/catch`, 
 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
-| `agent_capabilities` | Which of the 22 governance capabilities are active for each agent (e.g. `task_assignment`, `orphan_detection`, `tool_approval`, `notification_reader`); the `params` JSON column scopes capability behaviour (e.g. which tools the `tool_approval` agent covers) | `agent_id` FK to `agents.id`; unique per `(agent_id, capability_id)` |
+| `agent_capabilities` | Which of the 22 governance capabilities are active for each agent (e.g. `task_assignment`, `orphan_detection`, `tool_approval`, `notification_reader`); the `params` JSON column scopes capability behaviour (e.g. which tools the `tool_approval` agent covers) | `agent_id` is a `NOT NULL` UUID FK to `agents.id` with `ON DELETE CASCADE` — firing an agent atomically clears its capability assignments; unique per `(agent_id, capability_id)` |
 | `tool_approvals` | Pending and resolved approval requests for `confirm`/`always_confirm`-level tools. The `decided_by_id` UUID column records which agent made the approval decision; the `boss` sentinel UUID (`00000000-0000-0000-0000-000000000002`) is used when the human operator approves. | FKs to `agents.id`, `tasks`, and `spaces`; stores execution context and resume state |
 | `rules` | Rules injected into agent system prompts; stores `category` and `title` alongside `content`, with optional JSON `condition` (`{ scenes: string[], agents?: string[], hint?: string }`) | Scoped via `scope` + `scope_id` to one of `company`/`org`/`dept`/`project`/`room` |
 
@@ -164,6 +164,16 @@ Skill memory is not currently persisted on disk as a dedicated file; the `Thinkr
 ### `governance_events`
 
 Governance events are persisted in their own `governance_events` table (decoupled from the generic `messages` table): `id, sender_id, content, event_type, priority, created_at`. `sender_id` is a UUID FK to `agents.id`; system-generated governance events reference the `system` sentinel UUID.
+
+### Record store isolation
+
+The `records` table does not live in the main Space database — it lives in a dedicated SQLite file `office/records.db`. This preserves the Phase 11 design property that a container's record corpus is a single portable file (easy to export, archive, or attach separate PRAGMA tuning for) and keeps the main DB free of the record-store's high-write-rate workload.
+
+Because SQL foreign keys cannot cross database files, `records.agent_id` cannot be enforced by a `REFERENCES agents(id)` constraint. Integrity is instead guaranteed by three application-layer gates:
+
+1. **Write-time validation.** Every code path that writes an `agent_id` into `records.db` (`POST /api/records`, the `write_record` tool, governance artifacts) calls a shared helper that rejects anything that isn't a valid UUID present in `agents.id`. Invalid writes return `400` and never touch disk.
+2. **Delete hook.** `DELETE /api/agents/:id` synchronously calls `recordStore.deleteByAgent(agentId)` after the main-DB transaction commits. The hook is best-effort: a failure is logged as a warning but does not roll back the agent delete. The weekly cron (below) is the safety net for missed deletes.
+3. **Weekly orphan sweep.** The seeded `orphan_records_cleanup` cron job runs every Monday at 03:00, scans `records.db` for rows whose `agent_id` is no longer in `agents.id`, deletes them, and exposes `records_orphan_count` on the `/api/metrics` admin endpoint so orphan accumulation is observable.
 
   Memory paths:
     office/agents/<uuid>/{persona,short_memory,long_memory}.md   — managed by src/office.js
@@ -191,7 +201,7 @@ Governance events are persisted in their own `governance_events` table (decouple
 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
-| `cron_jobs` | Scheduled recurring jobs: governance routines, task dispatches, and scripts; tracks last/next run and execution stats | `assigned_to_id` and `created_by_id` FKs to `agents.id`; governance jobs map to a `capability_id` |
+| `cron_jobs` | Scheduled recurring jobs: governance routines, task dispatches, and scripts; tracks last/next run and execution stats. The `type` column is one of `task` / `governance` / `script` / `system`. A built-in `orphan_records_cleanup` row (`type = 'system'`, `schedule = '0 3 * * 1'`, owned by the `system` sentinel) runs every Monday at 03:00 and sweeps the isolated `office/records.db` for rows whose `agent_id` no longer exists in `agents.id`; the resulting orphan count is surfaced through `/api/metrics`. | `assigned_to_id` and `created_by_id` FKs to `agents.id`; governance jobs map to a `capability_id` |
 | `cron_executions` | Execution log for each cron job fire, recording status, timing, and any created task | References `cron_jobs`; optionally references `tasks` |
 
 ---
