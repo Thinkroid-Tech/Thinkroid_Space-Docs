@@ -175,11 +175,14 @@ Because SQL foreign keys cannot cross database files, `records.agent_id` cannot 
 2. **Delete hook.** `DELETE /api/agents/:id` synchronously calls `recordStore.deleteByAgent(agentId)` after the main-DB transaction commits. The hook is best-effort: a failure is logged as a warning but does not roll back the agent delete. The weekly cron (below) is the safety net for missed deletes.
 3. **Weekly orphan sweep.** The seeded `orphan_records_cleanup` cron job runs every Monday at 03:00, scans `records.db` for rows whose `agent_id` is no longer in `agents.id`, deletes them, and exposes `records_orphan_count` on the `/api/metrics` admin endpoint so orphan accumulation is observable.
 
+```
   Memory paths:
     office/agents/<uuid>/{persona,short_memory,long_memory}.md   — managed by src/office.js
     office/projects/thinkroid-space/memory.md                     — project-shared Markdown
     office/legacies/<uuid>/                                       — offboarding snapshot
     agent:<uuid>:memory_config                                    — stored in global_settings KV
+```
+
 # Database: System Tables
 
 > See also: [Back to top](#database-overview) | [Core Tables](#core)

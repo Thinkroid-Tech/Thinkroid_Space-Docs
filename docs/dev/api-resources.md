@@ -4,7 +4,9 @@
 
 Manage Docker containers with the `ts.managed=true` label.
 
-> **Naming convention.** Container names have the form `ts_<uuid>_<scope>_<shortId>` where `scope` is one of `sandbox` / `deploy` / `service`. Networks are `ts-net-<uuid>`. Volumes are `ts-vol-<uuid>_<type>`. No display name appears in any Docker object. Identity is carried on the `ts.agent.id` label (immutable UUID); `ts.agent.name` is a refreshable debug-only metadata label that is rewritten whenever the agent is renamed, without rebuilding the container. Debug with `docker ps --format '{{.Names}} {{.Label "ts.agent.name"}}'`.
+**Naming convention.** Container names have the form `ts_<uuid>_<scope>_<shortId>` where `scope` is one of `sandbox` / `deploy` / `service`. Networks are `ts-net-<uuid>`. Volumes are `ts-vol-<uuid>_<type>`. No display name appears in any Docker object. Identity is carried on the `ts.agent.id` label (immutable UUID); `ts.agent.name` is a refreshable debug-only metadata label that is rewritten whenever the agent is renamed, without rebuilding the container.
+
+Debug with a Go-template `docker ps --format` call that decorates the UUID-named container with its current display name — see `docker ps` documentation for the exact template syntax.
 
 ### `GET /api/containers`
 List all managed Docker containers. Returns `503` if Docker is unavailable.
