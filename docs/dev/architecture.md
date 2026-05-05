@@ -69,7 +69,7 @@ Agent-generated records — notes, meeting conclusions, task snapshots — live 
 │  │                                                     │   │
 │  │  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │   │
 │  │  │  Routes  │  │   Services   │  │ Tool Registry │  │   │
-│  │  │  (REST)  │  │              │  │ (51 tools,    │  │   │
+│  │  │  (REST)  │  │              │  │ (50 tools,    │  │   │
 │  │  │          │  │  AI Engine   │  │  auto-discover│  │   │
 │  │  │ agents   │  │  Idle Loop   │  │  & execute)   │  │   │
 │  │  │ tasks    │  │  Context Eng │  │               │  │   │
@@ -159,8 +159,8 @@ thinkroid-space/
 │       │   ├── sceneTemplates.js    #   Prompt scene templates
 │       │   ├── tileGrid.js          #   Tile coordinate system
 │       │   ├── auth.js              #   JWT & password management
-│       │   ├── tools/               #   51 auto-discovered agent tools
-│       │   │   ├── registry.js      #     Tool auto-discovery & registration (loads all 51 tool files; exports `{ definition, executor, defaultPermission }`)
+│       │   ├── tools/               #   50 auto-discovered agent tools
+│       │   │   ├── registry.js      #     Tool auto-discovery & registration (loads all 50 tool files; exports `{ definition, executor, defaultPermission }`)
 │       │   │   ├── index.js         #     Tool execution dispatcher (approvals, permission checks, agent-approval routing)
 │       │   │   ├── permissions.js   #     Tool permission checks
 │       │   │   ├── helpers.js       #     Shared tool utilities

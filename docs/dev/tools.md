@@ -1,6 +1,6 @@
 # Agent Tools
 
-Thinkroid Space agents interact with the world through tools. All tools are auto-discovered from `thinkroid-space-server/src/services/tools/` by `registry.js` — each tool file exports `{ defaultPermission, definition, executor }`. The registry currently loads **51 built-in tools**: 8 file / shell / web, 6 container, 1 introspection, 8 collaboration, 6 task / project, 3 record & memory, 2 spatial, 1 reasoning, 1 skill, 1 scheduling, and 14 Athena UI-bridge tools.
+Thinkroid Space agents interact with the world through tools. All tools are auto-discovered from `thinkroid-space-server/src/services/tools/` by `registry.js` — each tool file exports `{ defaultPermission, definition, executor }`. The registry currently loads **50 built-in tools**: 8 file / shell / web, 6 container, 1 introspection, 8 collaboration, 6 task / project, 3 record & memory, 2 spatial, 1 reasoning, 1 skill, 1 scheduling, and 13 Athena UI-bridge tools. The 13 Athena tools carry a `specialRoleExclusive: 'athena'` registry marker so only the Athena agent can call them; eleven default-allow tools (e.g. `chat_with`, `shell_exec`, `delegate_task`, `call_meeting`) carry a `roleBlacklist: ['athena']` marker that denies Athena access while leaving them open to every other agent.
 
 ---
 
@@ -161,14 +161,13 @@ This allows governance agents (e.g. a security reviewer) to approve or reject se
 
 ## Athena Tools
 
-Athena ships with 14 UI-bridge tools in the same `services/tools/` registry; these are exposed only during Athena conversations and are filtered out of regular agent tool lists.
+Athena ships with 13 UI-bridge tools in the same `services/tools/` registry; these carry a `specialRoleExclusive: 'athena'` registry marker so they are exposed only to the Athena agent (`special_role='athena'`) and filtered out of every other agent's tool list.
 
 | Tool | Description |
 |------|-------------|
 | `athena_query_space` | Read workspace data (agents, tasks, settings) to answer user questions. |
 | `athena_query_agents` | Query agent details (roster, specialty, current task, governance capabilities). |
 | `athena_query_tasks` | Query tasks across projects with status / assignee filters. |
-| `athena_query_memory` | Read a target agent's memory fragments related to a topic. |
 | `athena_query_settings` | Read individual keys from `global_settings`. |
 | `athena_create_task` | Create a new task on behalf of the user (Boss-side creation). |
 | `athena_send_message` | Send a message into a chat channel on the user's behalf. |

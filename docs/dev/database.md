@@ -9,7 +9,8 @@ The database file is stored at the path set by the `DB_PATH` environment variabl
 `agents.id` (UUID v4) is the system-wide identity key. Every cross-table reference is a UUID FK to `agents.id`; `agents.name` is mutable display text and never appears as a foreign key.
 
 - **`agents.kind`** — `TEXT` column with CHECK constraint `kind IN ('human', 'system', 'boss')`. Defaults to `'human'` for user-created rows.
-- **`human_agents`** — a view over `agents` that filters `WHERE kind = 'human'`. Any query that should see only real employees (the office roster, task-assignment candidates, morale rollups) reads from this view.
+- **`agents.special_role`** — nullable `TEXT` discriminator with an allow-list of `{NULL, 'athena'}` enforced by `trg_agents_special_role_check_insert` and `trg_agents_special_role_check_update` triggers. The Athena assistant is a single `kind='human'` + `agent_type='native'` + `special_role='athena'` row at fixed UUID `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, kept unique by partial unique index `idx_athena_singleton ON agents(special_role) WHERE special_role='athena'`. Athena exists as a real row in `agents` (so FKs from `messages.sender_id`, `tool_approvals.agent_id`, etc. resolve normally) but is excluded from the employee roster — see the `human_agents` view below.
+- **`human_agents`** — a view over `agents` that filters `WHERE kind = 'human' AND special_role IS NULL`. Any query that should see only real employees (the office roster, task-assignment candidates, morale rollups, hire pool) reads from this view. Athena is in `agents` but never in `human_agents`, which is how the picker / org chart / task-assignment lists hide her without inventing parallel SQL filters in every consumer.
 - **Sentinel rows** — `db.js` seeds two non-human actors at init so FK references to "system-generated" or "the operator" can be satisfied without a user-created agent:
 
   | Name | UUID | Kind |
